@@ -2,7 +2,9 @@ const express = require("express");
 const mysql = require("mysql2");
 const app = express();
 const port = 3000;
+const cors = require("cors");
 
+app.use(cors());
 app.use(express.json());
 
 // DATABASE CONNECTION
@@ -10,7 +12,7 @@ const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "newapp", // space na rakho
+  database: "zarmeen", // space na rakho
 });
 
 app.get('/', (req, res) => {
@@ -24,19 +26,19 @@ db.connect((err) => {
 
 // ======================= SIGNUP API =========================
 app.post("/signup", (req, res) => {
-  const { username, email, password } = req.body;
+  const { name, age, height, weight, gender, is_diabetic, has_bp, email, password } = req.body;
 
-  if (!username || !email || !password) {
+  if (!name || !age || !height || !weight || !gender || !is_diabetic || !has_bp || !email || !password) {
     return res.json({ success: false, message: "All fields required" });
   }
 
   const sql =
-    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
+    "INSERT INTO users (name, age, height, weight, gender, is_diabetic, has_bp, email, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-  db.query(sql, [username, email, password], (err, result) => {
+  db.query(sql, [name, age, height, weight, gender, is_diabetic, has_bp, email, password], (err, result) => {
     if (err) return res.json({ success: false, message: err.message });
 
-    return res.json({
+    return res.status(201).json({
       success: true,
       message: "Signup Successful",
       user_id: result.insertId,
@@ -48,13 +50,17 @@ app.post("/signup", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const sql = "SELECT * FROM users WHERE email = ? AND password = ?";
+  const sql = "SELECT id, name, email FROM users WHERE email = ? AND password = ?";
 
   db.query(sql, [email, password], (err, rows) => {
     if (err) return res.json({ success: false, message: err.message });
 
     if (rows.length > 0) {
-      return res.json({ success: true, message: "Login successful" });
+      return res.json({
+        success: true,
+        message: "Login successful",
+        user: rows[0],
+      });
     } else {
       return res.json({
         success: false,
