@@ -4,12 +4,17 @@ const app = express();
 const port = 3000;
 const cors = require("cors");
 
+
 app.use(cors());
 app.use(express.json());
 
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET = "serve_ease"; 
+
 // DATABASE CONNECTION
 const db = mysql.createConnection({
-  host: "localhost",
+  host: "localhost", // 127.0.0.1
   user: "root",
   password: "",
   database: "zarmeen", // space na rakho
@@ -22,6 +27,40 @@ app.get('/', (req, res) => {
 db.connect((err) => {
   if (err) throw err;
   console.log("Database connected");
+});
+
+// ======================= LOGIN API =========================
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  const sql = "SELECT id, name, email FROM users WHERE email = ? AND password = ?";
+
+  db.query(sql, [email, password], (err, rows) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+
+    if (rows.length > 0) {
+      const user = rows[0];
+
+      // ✅ Generate token — Flutter expects this
+      const token = jwt.sign(
+        { id: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        token: token,      // ✅ Flutter saves this
+        user: user,        // ✅ Flutter saves this too
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+  });
 });
 
 // ======================= SIGNUP API =========================
@@ -43,30 +82,6 @@ app.post("/signup", (req, res) => {
       message: "Signup Successful",
       user_id: result.insertId,
     });
-  });
-});
-
-// ======================= LOGIN API =========================
-app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-
-  const sql = "SELECT id, name, email FROM users WHERE email = ? AND password = ?";
-
-  db.query(sql, [email, password], (err, rows) => {
-    if (err) return res.json({ success: false, message: err.message });
-
-    if (rows.length > 0) {
-      return res.json({
-        success: true,
-        message: "Login successful",
-        user: rows[0],
-      });
-    } else {
-      return res.json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
   });
 });
 
