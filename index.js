@@ -17,7 +17,7 @@ const db = mysql.createConnection({
   host: "localhost", // 127.0.0.1
   user: "root",
   password: "",
-  database: "zarmeen", // space na rakho
+  database: "healthy_wealthy_db", // space na rakho
 });
 
 app.get('/', (req, res) => {
@@ -64,27 +64,67 @@ app.post("/login", (req, res) => {
 });
 
 // ======================= SIGNUP API =========================
-app.post("/signup", (req, res) => {
+app.post("/signup", async (req, res) => {
   const { name, age, height, weight, gender, is_diabetic, has_bp, email, password } = req.body;
 
-  if (!name || !age || !height || !weight || !gender || !is_diabetic || !has_bp || !email || !password) {
-    return res.json({ success: false, message: "All fields required" });
+  console.log("Received registration:", req.body);
+
+  // Only check required fields (not booleans!)
+  if (!name || !email || !password) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "Name, email and password are required" 
+    });
   }
 
-  const sql =
-    "INSERT INTO users (name, age, height, weight, gender, is_diabetic, has_bp, email, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  // Check if email exists
+  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
 
-  db.query(sql, [name, age, height, weight, gender, is_diabetic, has_bp, email, password], (err, result) => {
-    if (err) return res.json({ success: false, message: err.message });
+    if (results.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email already registered" 
+      });
+    }
 
-    return res.status(201).json({
-      success: true,
-      message: "Signup Successful",
-      user_id: result.insertId,
-    });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const sql = `INSERT INTO users (name, age, height, weight, gender, is_diabetic, has_bp, email, password) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    db.query(
+      sql,
+      [
+        name, 
+        age || null, 
+        height || null, 
+        weight || null, 
+        gender || 'Male', 
+        is_diabetic || false,  // ✅ Handles false correctly
+        has_bp || false,        // ✅ Handles false correctly
+        email, 
+        hashedPassword
+      ],
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ success: false, message: "Failed to create account" });
+        }
+
+        return res.status(201).json({
+          success: true,
+          message: "Account created successfully",
+          user_id: result.insertId,
+        });
+      }
+    );
   });
 });
-
 // ======================= GET USERS =========================
 app.get("/users", (req, res) => {
   db.query("SELECT * FROM users", (err, result) => {
