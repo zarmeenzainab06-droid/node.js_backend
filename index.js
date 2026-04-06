@@ -5,6 +5,7 @@ const port = 3000;
 const cors = require("cors");
 
 
+
 app.use(cors());
 app.use(express.json());
 
@@ -28,6 +29,32 @@ db.connect((err) => {
   if (err) throw err;
   console.log("Database connected");
 });
+// ======================= MIDDLEWARE TO VERIFY TOKEN =========================
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // "Bearer TOKEN"
+
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      message: "No token provided" 
+    });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Invalid or expired token" 
+      });
+    }
+
+    req.userId = decoded.id;
+    req.userEmail = decoded.email;
+    next();
+  });
+};
+
 
 // ======================= LOGIN API =========================
 app.post("/login", (req, res) => {
@@ -64,12 +91,12 @@ app.post("/login", (req, res) => {
 });
 
 // ======================= SIGNUP API =========================
-app.post("/signup", async (req, res) => {
+app.post("/signup", (req, res) => {
   const { name, age, height, weight, gender, is_diabetic, has_bp, email, password } = req.body;
 
   console.log("Received registration:", req.body);
 
-  // Only check required fields (not booleans!)
+  // Only check required fields
   if (!name || !email || !password) {
     return res.status(400).json({ 
       success: false, 
@@ -78,7 +105,7 @@ app.post("/signup", async (req, res) => {
   }
 
   // Check if email exists
-  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+  db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ success: false, message: "Database error" });
@@ -91,9 +118,6 @@ app.post("/signup", async (req, res) => {
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const sql = `INSERT INTO users (name, age, height, weight, gender, is_diabetic, has_bp, email, password) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
@@ -105,10 +129,10 @@ app.post("/signup", async (req, res) => {
         height || null, 
         weight || null, 
         gender || 'Male', 
-        is_diabetic || false,  // ✅ Handles false correctly
-        has_bp || false,        // ✅ Handles false correctly
+        is_diabetic || false,
+        has_bp || false,
         email, 
-        hashedPassword
+        password  // ✅ Plain password (no hashing)
       ],
       (err, result) => {
         if (err) {
@@ -131,6 +155,95 @@ app.get("/users", (req, res) => {
     if (err) return res.json({ success: false, message: err.message });
 
     return res.json(result);
+  });
+});
+// ======================= ADD MEAL (PROTECTED) =========================
+app.post("/meals/add", verifyToken, (req, res) => {
+  const { food_name, calories, meal_type, serving_size, date } = req.body;
+  const user_id = req.userId;
+
+  console.log("Add meal request:", { user_id, food_name, calories, meal_type });
+
+  if (!food_name || !calories || !meal_type) {
+    return res.status(400).json({ 
+      success: false, 
+      message: "Food name, calories, and meal type are required" 
+    });
+  }
+
+  const sql = `INSERT INTO meals (user_id, food_name, calories, meal_type, serving_size, date) 
+               VALUES (?, ?, ?, ?, ?, ?)`;
+
+  const mealDate = date || new Date().toISOString().split('T')[0];
+
+  db.query(
+    sql,
+    [user_id, food_name, calories, meal_type, serving_size || '', mealDate],
+    (err, result) => {
+      if (err) {
+        console.error("Add meal error:", err);
+        return res.status(500).json({ success: false, message: "Failed to add meal" });
+      }
+
+      console.log("✅ Meal added successfully");
+      return res.status(201).json({
+        success: true,
+        message: "Meal added successfully",
+        meal_id: result.insertId,
+      });
+    }
+  );
+});
+
+// ======================= GET TODAY'S MEALS (PROTECTED) =========================
+app.get("/meals/today", verifyToken, (req, res) => {
+  const user_id = req.userId;
+  const today = new Date().toISOString().split('T')[0];
+
+  const sql = `SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at DESC`;
+
+  db.query(sql, [user_id, today], (err, results) => {
+    if (err) {
+      console.error("Get meals error:", err);
+      return res.status(500).json({ success: false, message: "Failed to fetch meals" });
+    }
+
+    const totalCalories = results.reduce((sum, meal) => sum + meal.calories, 0);
+
+    console.log(`✅ Fetched ${results.length} meals, total: ${totalCalories} kcal`);
+
+    return res.status(200).json({
+      success: true,
+      meals: results,
+      total_calories: totalCalories,
+    });
+  });
+});
+
+// ======================= DELETE MEAL (PROTECTED) =========================
+app.delete("/meals/:id", verifyToken, (req, res) => {
+  const meal_id = req.params.id;
+  const user_id = req.userId;
+
+  console.log("Delete meal request:", { meal_id, user_id });
+
+  const sql = "DELETE FROM meals WHERE id = ? AND user_id = ?";
+
+  db.query(sql, [meal_id, user_id], (err, result) => {
+    if (err) {
+      console.error("Delete meal error:", err);
+      return res.status(500).json({ success: false, message: "Failed to delete meal" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Meal not found" });
+    }
+
+    console.log("✅ Meal deleted successfully");
+    return res.status(200).json({
+      success: true,
+      message: "Meal deleted successfully",
+    });
   });
 });
 
