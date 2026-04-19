@@ -60,7 +60,7 @@ const verifyToken = (req, res, next) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const sql = "SELECT id, name, email FROM users WHERE email = ? AND password = ?";
+  const sql = "SELECT id, name, email, role FROM users WHERE email = ? AND password = ?";
 
   db.query(sql, [email, password], (err, rows) => {
     if (err) return res.status(500).json({ success: false, message: err.message });
@@ -70,7 +70,7 @@ app.post("/login", (req, res) => {
 
       // ✅ Generate token — Flutter expects this
       const token = jwt.sign(
-        { id: user.id, email: user.email },
+        { id: user.id, email: user.email, role: user.role },//for admin just make chnge in this line
         JWT_SECRET,
         { expiresIn: "7d" }
       );
@@ -89,7 +89,104 @@ app.post("/login", (req, res) => {
     }
   });
 });
+// ✅ Admin middleware - verifies JWT token AND checks role = admin
+const verifyAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
 
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ success: false, message: 'Invalid token' });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Admins only.' });
+    }
+
+    req.user = decoded;
+    next();
+  });
+};
+
+// ✅ GET all foods
+app.get('/admin/foods', verifyAdmin, (req, res) => {
+  const sql = 'SELECT * FROM foods ORDER BY id DESC';
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+
+    return res.status(200).json({
+      success: true,
+      foods: rows,
+    });
+  });
+});
+
+// ✅ POST add new food
+app.post('/admin/foods', verifyAdmin, (req, res) => {
+  const { name, calories, portion, is_diabetic_safe, is_bp_safe } = req.body;
+
+  if (!name || !calories || !portion) {
+    return res.status(400).json({ success: false, message: 'Name, calories and portion are required' });
+  }
+
+  const sql = 'INSERT INTO foods (name, calories, portion, is_diabetic_safe, is_bp_safe) VALUES (?, ?, ?, ?, ?)';
+
+  db.query(sql, [name, calories, portion, is_diabetic_safe ? 1 : 0, is_bp_safe ? 1 : 0], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Food added successfully',
+      foodId: result.insertId,
+    });
+  });
+});
+
+// ✅ PUT update food
+app.put('/admin/foods/:id', verifyAdmin, (req, res) => {
+  const { id } = req.params;
+  const { name, calories, portion, is_diabetic_safe, is_bp_safe } = req.body;
+
+  const sql = 'UPDATE foods SET name = ?, calories = ?, portion = ?, is_diabetic_safe = ?, is_bp_safe = ? WHERE id = ?';
+
+  db.query(sql, [name, calories, portion, is_diabetic_safe ? 1 : 0, is_bp_safe ? 1 : 0, id], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Food not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Food updated successfully',
+    });
+  });
+});
+
+// ✅ DELETE food
+app.delete('/admin/foods/:id', verifyAdmin, (req, res) => {
+  const { id } = req.params;
+
+  const sql = 'DELETE FROM foods WHERE id = ?';
+
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Food not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Food deleted successfully',
+    });
+  });
+});// admin login end
 // ======================= SIGNUP API =========================
 app.post("/signup", (req, res) => {
   const { name, age, height, weight, gender, is_diabetic, has_bp, email, password } = req.body;
