@@ -1,76 +1,86 @@
 const express = require("express");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise"); // ✅ using promise version for async/await
 const app = express();
 const port = 3000;
 const cors = require("cors");
-
-
+const jwt = require("jsonwebtoken");
 
 app.use(cors());
 app.use(express.json());
 
-const jwt = require("jsonwebtoken");
+const JWT_SECRET = "serve_ease";
 
-const JWT_SECRET = "serve_ease"; 
-
-// DATABASE CONNECTION
-const db = mysql.createConnection({
-  host: "localhost", // 127.0.0.1
+// ── DATABASE CONNECTION ────────────────────────────────────────
+const db = mysql.createPool({
+  host: "localhost",
   user: "root",
   password: "",
-  database: "healthy_wealthy_db", // space na rakho
+  database: "healthy_wealthy_db",
 });
 
-app.get('/', (req, res) => {
-  res.send('API is working');
+app.get("/", (req, res) => {
+  res.send("GymSwift API is running");
 });
 
-db.connect((err) => {
-  if (err) throw err;
-  console.log("Database connected");
-});
-// ======================= MIDDLEWARE TO VERIFY TOKEN =========================
+// ── MIDDLEWARE: Verify Token ───────────────────────────────────
 const verifyToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // "Bearer TOKEN"
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: "No token provided" 
-    });
+    return res.status(401).json({ success: false, message: "No token provided" });
   }
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Invalid or expired token" 
-      });
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
     }
-
     req.userId = decoded.id;
     req.userEmail = decoded.email;
+    req.userRole = decoded.role;
     next();
   });
 };
 
+// ── MIDDLEWARE: Verify Admin ───────────────────────────────────
+const verifyAdmin = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
-// ======================= LOGIN API =========================
-app.post("/login", (req, res) => {
+  if (!token) {
+    return res.status(401).json({ success: false, message: "No token provided" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ success: false, message: "Invalid token" });
+    }
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admins only." });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
+// ══════════════════════════════════════════════════════════════
+//  AUTH ROUTES
+// ══════════════════════════════════════════════════════════════
+
+// ── POST /login ────────────────────────────────────────────────
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const sql = "SELECT id, name, email, role FROM users WHERE email = ? AND password = ?";
-
-  db.query(sql, [email, password], (err, rows) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
+  try {
+    const [rows] = await db.query(
+      "SELECT id, name, email, role, phone FROM users WHERE email = ? AND password = ?",
+      [email, password]
+    );
 
     if (rows.length > 0) {
       const user = rows[0];
-
-      // ✅ Generate token — Flutter expects this
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },//for admin just make chnge in this line
+        { id: user.id, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
@@ -78,272 +88,204 @@ app.post("/login", (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Login successful",
-        token: token,      // ✅ Flutter saves this
-        user: user,        // ✅ Flutter saves this too
+        token: token,
+        user: user,  // ✅ Flutter AuthService reads data.token and data.user
       });
     } else {
-      return res.status(200).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+      return res.status(200).json({ success: false, message: "Invalid email or password" });
     }
-  });
-});
-// ✅ Admin middleware - verifies JWT token AND checks role = admin
-const verifyAdmin = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
-
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'No token provided' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Invalid token' });
-    }
-
-    if (decoded.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Access denied. Admins only.' });
-    }
-
-    req.user = decoded;
-    next();
-  });
-};
-
-// ✅ GET all foods
-app.get('/admin/foods', verifyAdmin, (req, res) => {
-  const sql = 'SELECT * FROM foods ORDER BY id DESC';
-
-  db.query(sql, (err, rows) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-
-    return res.status(200).json({
-      success: true,
-      foods: rows,
-    });
-  });
 });
 
-// ✅ POST add new food
-app.post('/admin/foods', verifyAdmin, (req, res) => {
-  const { name, calories, portion, is_diabetic_safe, is_bp_safe } = req.body;
+// ── POST /signup ───────────────────────────────────────────────
+app.post("/signup", async (req, res) => {
+  const { name, phone, gender, email, password } = req.body;
 
-  if (!name || !calories || !portion) {
-    return res.status(400).json({ success: false, message: 'Name, calories and portion are required' });
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, message: "Name, email and password are required" });
   }
 
-  const sql = 'INSERT INTO foods (name, calories, portion, is_diabetic_safe, is_bp_safe) VALUES (?, ?, ?, ?, ?)';
+  try {
+    const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
 
-  db.query(sql, [name, calories, portion, is_diabetic_safe ? 1 : 0, is_bp_safe ? 1 : 0], (err, result) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO users (name, phone, gender, email, password) VALUES (?, ?, ?, ?, ?)`,
+      [name, phone || null, gender || "male", email, password]
+    );
 
     return res.status(201).json({
       success: true,
-      message: 'Food added successfully',
-      foodId: result.insertId,
+      message: "Account created successfully",
+      user_id: result.insertId,
     });
-  });
-});
-
-// ✅ PUT update food
-app.put('/admin/foods/:id', verifyAdmin, (req, res) => {
-  const { id } = req.params;
-  const { name, calories, portion, is_diabetic_safe, is_bp_safe } = req.body;
-
-  const sql = 'UPDATE foods SET name = ?, calories = ?, portion = ?, is_diabetic_safe = ?, is_bp_safe = ? WHERE id = ?';
-
-  db.query(sql, [name, calories, portion, is_diabetic_safe ? 1 : 0, is_bp_safe ? 1 : 0, id], (err, result) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Food not found' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Food updated successfully',
-    });
-  });
-});
-
-// ✅ DELETE food
-app.delete('/admin/foods/:id', verifyAdmin, (req, res) => {
-  const { id } = req.params;
-
-  const sql = 'DELETE FROM foods WHERE id = ?';
-
-  db.query(sql, [id], (err, result) => {
-    if (err) return res.status(500).json({ success: false, message: err.message });
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Food not found' });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Food deleted successfully',
-    });
-  });
-});// admin login end
-// ======================= SIGNUP API =========================
-app.post("/signup", (req, res) => {
-  const { name, age, height, weight, gender, is_diabetic, has_bp, email, password } = req.body;
-
-  console.log("Received registration:", req.body);
-
-  // Only check required fields
-  if (!name || !email || !password) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Name, email and password are required" 
-    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Failed to create account" });
   }
+});
 
-  // Check if email exists
-  db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
+// ══════════════════════════════════════════════════════════════
+//  ADMIN ROUTES
+// ══════════════════════════════════════════════════════════════
 
-    if (results.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Email already registered" 
-      });
-    }
-
-    const sql = `INSERT INTO users (name, age, height, weight, gender, is_diabetic, has_bp, email, password) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    db.query(
-      sql,
-      [
-        name, 
-        age || null, 
-        height || null, 
-        weight || null, 
-        gender || 'Male', 
-        is_diabetic || false,
-        has_bp || false,
-        email, 
-        password  // ✅ Plain password (no hashing)
-      ],
-      (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ success: false, message: "Failed to create account" });
-        }
-
-        return res.status(201).json({
-          success: true,
-          message: "Account created successfully",
-          user_id: result.insertId,
-        });
-      }
+// ── GET /admin/stats ───────────────────────────────────────────
+app.get("/admin/stats", verifyAdmin, async (req, res) => {
+  try {
+    const [[{ totalMembers }]] = await db.query(
+      `SELECT COUNT(*) AS totalMembers FROM users WHERE role = 'user'`
     );
-  });
-});
-// ======================= GET USERS =========================
-app.get("/users", (req, res) => {
-  db.query("SELECT * FROM users", (err, result) => {
-    if (err) return res.json({ success: false, message: err.message });
 
-    return res.json(result);
-  });
-});
-// ======================= ADD MEAL (PROTECTED) =========================
-app.post("/meals/add", verifyToken, (req, res) => {
-  const { food_name, calories, meal_type, serving_size, date } = req.body;
-  const user_id = req.userId;
+    const [[{ active }]] = await db.query(
+      `SELECT COUNT(*) AS active FROM memberships
+       WHERE status = 'active' AND end_date >= CURDATE()`
+    );
 
-  console.log("Add meal request:", { user_id, food_name, calories, meal_type });
+    const [[{ expired }]] = await db.query(
+      `SELECT COUNT(*) AS expired FROM memberships
+       WHERE status = 'expired' OR end_date < CURDATE()`
+    );
 
-  if (!food_name || !calories || !meal_type) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Food name, calories, and meal type are required" 
+    const [[{ pendingPayments }]] = await db.query(
+      `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
+    );
+
+    return res.status(200).json({
+      success: true,
+      stats: { totalMembers, active, expired, pendingPayments },
     });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── GET /admin/activity ────────────────────────────────────────
+app.get("/admin/activity", verifyAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT
+         u.name AS memberName,
+         CASE
+           WHEN p.id IS NOT NULL THEN 'Payment received'
+           WHEN m.id IS NOT NULL THEN 'Membership renewed'
+           ELSE 'New member joined'
+         END AS action,
+         COALESCE(m.status, 'active') AS status,
+         TIMESTAMPDIFF(HOUR, COALESCE(p.created_at, m.start_date, u.created_at), NOW()) AS hoursAgo
+       FROM users u
+       LEFT JOIN memberships m ON m.user_id = u.id
+       LEFT JOIN payments p ON p.user_id = u.id
+       WHERE u.role = 'user'
+       ORDER BY COALESCE(p.created_at, m.start_date, u.created_at) DESC
+       LIMIT 10`
+    );
+
+    const activity = rows.map((r) => ({
+      memberName: r.memberName,
+      action: r.action,
+      status: r.status,
+      timeAgo:
+        r.hoursAgo < 24
+          ? `${r.hoursAgo} hour${r.hoursAgo !== 1 ? "s" : ""} ago`
+          : `${Math.floor(r.hoursAgo / 24)} day${Math.floor(r.hoursAgo / 24) !== 1 ? "s" : ""} ago`,
+    }));
+
+    return res.status(200).json({ success: true, activity });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── GET /admin/members ─────────────────────────────────────────
+app.get("/admin/members", verifyAdmin, async (req, res) => {
+  try {
+    const search = req.query.search ? `%${req.query.search}%` : "%";
+
+    const [rows] = await db.query(
+      `SELECT
+         u.id, u.name, u.email, u.phone, u.gender, u.created_at,
+         m.plan, m.status AS membership_status, m.end_date
+       FROM users u
+       LEFT JOIN memberships m ON m.user_id = u.id
+         AND m.id = (
+           SELECT id FROM memberships
+           WHERE user_id = u.id
+           ORDER BY created_at DESC LIMIT 1
+         )
+       WHERE u.role = 'user'
+         AND (u.name LIKE ? OR u.email LIKE ?)
+       ORDER BY u.created_at DESC`,
+      [search, search]
+    );
+
+    return res.status(200).json({ success: true, members: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── POST /admin/members/:id/membership ────────────────────────
+app.post("/admin/members/:id/membership", verifyAdmin, async (req, res) => {
+  const userId = req.params.id;
+  const { plan, start_date, end_date, amount, payment_method } = req.body;
+
+  if (!plan || !start_date || !end_date || !amount) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
   }
 
-  const sql = `INSERT INTO meals (user_id, food_name, calories, meal_type, serving_size, date) 
-               VALUES (?, ?, ?, ?, ?, ?)`;
+  try {
+    // Expire any existing active membership
+    await db.query(
+      `UPDATE memberships SET status = 'expired' WHERE user_id = ?`,
+      [userId]
+    );
 
-  const mealDate = date || new Date().toISOString().split('T')[0];
+    // Insert new membership
+    await db.query(
+      `INSERT INTO memberships (user_id, plan, start_date, end_date, status)
+       VALUES (?, ?, ?, ?, 'active')`,
+      [userId, plan, start_date, end_date]
+    );
 
-  db.query(
-    sql,
-    [user_id, food_name, calories, meal_type, serving_size || '', mealDate],
-    (err, result) => {
-      if (err) {
-        console.error("Add meal error:", err);
-        return res.status(500).json({ success: false, message: "Failed to add meal" });
-      }
+    // Record payment
+    await db.query(
+      `INSERT INTO payments (user_id, amount, method, status) VALUES (?, ?, ?, 'paid')`,
+      [userId, amount, payment_method || "cash"]
+    );
 
-      console.log("✅ Meal added successfully");
-      return res.status(201).json({
-        success: true,
-        message: "Meal added successfully",
-        meal_id: result.insertId,
-      });
-    }
-  );
+    return res.status(201).json({ success: true, message: "Membership assigned successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
-// ======================= GET TODAY'S MEALS (PROTECTED) =========================
-app.get("/meals/today", verifyToken, (req, res) => {
-  const user_id = req.userId;
-  const today = new Date().toISOString().split('T')[0];
+// ── DELETE /admin/members/:id ──────────────────────────────────
+app.delete("/admin/members/:id", verifyAdmin, async (req, res) => {
+  const userId = req.params.id;
 
-  const sql = `SELECT * FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at DESC`;
+  try {
+    await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
+    await db.query(`DELETE FROM memberships WHERE user_id = ?`, [userId]);
+    await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
 
-  db.query(sql, [user_id, today], (err, results) => {
-    if (err) {
-      console.error("Get meals error:", err);
-      return res.status(500).json({ success: false, message: "Failed to fetch meals" });
-    }
-
-    const totalCalories = results.reduce((sum, meal) => sum + meal.calories, 0);
-
-    console.log(`✅ Fetched ${results.length} meals, total: ${totalCalories} kcal`);
-
-    return res.status(200).json({
-      success: true,
-      meals: results,
-      total_calories: totalCalories,
-    });
-  });
+    return res.status(200).json({ success: true, message: "Member deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
-// ======================= DELETE MEAL (PROTECTED) =========================
-app.delete("/meals/:id", verifyToken, (req, res) => {
-  const meal_id = req.params.id;
-  const user_id = req.userId;
-
-  console.log("Delete meal request:", { meal_id, user_id });
-
-  const sql = "DELETE FROM meals WHERE id = ? AND user_id = ?";
-
-  db.query(sql, [meal_id, user_id], (err, result) => {
-    if (err) {
-      console.error("Delete meal error:", err);
-      return res.status(500).json({ success: false, message: "Failed to delete meal" });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: "Meal not found" });
-    }
-
-    console.log("✅ Meal deleted successfully");
-    return res.status(200).json({
-      success: true,
-      message: "Meal deleted successfully",
-    });
-  });
-});
-
+// ── START SERVER ───────────────────────────────────────────────
 app.listen(port, () => {
-  console.log(`Server running port ${port}`);
+  console.log(`GymSwift server running on port ${port}`);
 });
