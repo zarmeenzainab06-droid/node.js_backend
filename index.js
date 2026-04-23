@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql2/promise"); // ✅ using promise version for async/await
+const mysql = require("mysql2/promise");
 const app = express();
 const port = 3000;
 const cors = require("cors");
@@ -26,11 +26,9 @@ app.get("/", (req, res) => {
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-
   if (!token) {
     return res.status(401).json({ success: false, message: "No token provided" });
   }
-
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).json({ success: false, message: "Invalid or expired token" });
@@ -46,11 +44,9 @@ const verifyToken = (req, res, next) => {
 const verifyAdmin = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-
   if (!token) {
     return res.status(401).json({ success: false, message: "No token provided" });
   }
-
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(403).json({ success: false, message: "Invalid token" });
@@ -70,13 +66,11 @@ const verifyAdmin = (req, res, next) => {
 // ── POST /login ────────────────────────────────────────────────
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const [rows] = await db.query(
       "SELECT id, name, email, role, phone FROM users WHERE email = ? AND password = ?",
       [email, password]
     );
-
     if (rows.length > 0) {
       const user = rows[0];
       const token = jwt.sign(
@@ -84,12 +78,11 @@ app.post("/login", async (req, res) => {
         JWT_SECRET,
         { expiresIn: "7d" }
       );
-
       return res.status(200).json({
         success: true,
         message: "Login successful",
-        token: token,
-        user: user,  // ✅ Flutter AuthService reads data.token and data.user
+        token,
+        user,
       });
     } else {
       return res.status(200).json({ success: false, message: "Invalid email or password" });
@@ -103,23 +96,18 @@ app.post("/login", async (req, res) => {
 // ── POST /signup ───────────────────────────────────────────────
 app.post("/signup", async (req, res) => {
   const { name, phone, gender, email, password } = req.body;
-
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, message: "Name, email and password are required" });
   }
-
   try {
     const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
-
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: "Email already registered" });
     }
-
     const [result] = await db.query(
       `INSERT INTO users (name, phone, gender, email, password) VALUES (?, ?, ?, ?, ?)`,
       [name, phone || null, gender || "male", email, password]
     );
-
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
@@ -141,21 +129,17 @@ app.get("/admin/stats", verifyAdmin, async (req, res) => {
     const [[{ totalMembers }]] = await db.query(
       `SELECT COUNT(*) AS totalMembers FROM users WHERE role = 'user'`
     );
-
     const [[{ active }]] = await db.query(
       `SELECT COUNT(*) AS active FROM memberships
        WHERE status = 'active' AND end_date >= CURDATE()`
     );
-
     const [[{ expired }]] = await db.query(
       `SELECT COUNT(*) AS expired FROM memberships
        WHERE status = 'expired' OR end_date < CURDATE()`
     );
-
     const [[{ pendingPayments }]] = await db.query(
       `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
     );
-
     return res.status(200).json({
       success: true,
       stats: { totalMembers, active, expired, pendingPayments },
@@ -186,7 +170,6 @@ app.get("/admin/activity", verifyAdmin, async (req, res) => {
        ORDER BY COALESCE(p.created_at, m.start_date, u.created_at) DESC
        LIMIT 10`
     );
-
     const activity = rows.map((r) => ({
       memberName: r.memberName,
       action: r.action,
@@ -196,7 +179,6 @@ app.get("/admin/activity", verifyAdmin, async (req, res) => {
           ? `${r.hoursAgo} hour${r.hoursAgo !== 1 ? "s" : ""} ago`
           : `${Math.floor(r.hoursAgo / 24)} day${Math.floor(r.hoursAgo / 24) !== 1 ? "s" : ""} ago`,
     }));
-
     return res.status(200).json({ success: true, activity });
   } catch (err) {
     console.error(err);
@@ -208,25 +190,118 @@ app.get("/admin/activity", verifyAdmin, async (req, res) => {
 app.get("/admin/members", verifyAdmin, async (req, res) => {
   try {
     const search = req.query.search ? `%${req.query.search}%` : "%";
+    const statusFilter = req.query.status; // optional: active/expired/pending
 
-    const [rows] = await db.query(
-      `SELECT
-         u.id, u.name, u.email, u.phone, u.gender, u.created_at,
-         m.plan, m.status AS membership_status, m.end_date
-       FROM users u
-       LEFT JOIN memberships m ON m.user_id = u.id
-         AND m.id = (
-           SELECT id FROM memberships
-           WHERE user_id = u.id
-           ORDER BY created_at DESC LIMIT 1
-         )
-       WHERE u.role = 'user'
-         AND (u.name LIKE ? OR u.email LIKE ?)
-       ORDER BY u.created_at DESC`,
-      [search, search]
+    let query = `
+      SELECT
+        u.id, u.name, u.email, u.phone, u.gender, u.training_slot, u.created_at,
+        u.trainer_id,
+        t.name AS trainer_name,
+        m.plan, m.status AS membership_status, m.end_date
+      FROM users u
+      LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
+      LEFT JOIN memberships m ON m.user_id = u.id
+        AND m.id = (
+          SELECT id FROM memberships
+          WHERE user_id = u.id
+          ORDER BY created_at DESC LIMIT 1
+        )
+      WHERE u.role = 'user'
+        AND (u.name LIKE ? OR u.email LIKE ?)
+    `;
+    const params = [search, search];
+
+    if (statusFilter && statusFilter !== 'all') {
+      query += ` AND m.status = ?`;
+      params.push(statusFilter);
+    }
+
+    query += ` ORDER BY u.created_at DESC`;
+
+    const [rows] = await db.query(query, params);
+    return res.status(200).json({ success: true, members: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── POST /admin/members ────────────────────────────────────────
+// Admin creates a new member directly
+app.post("/admin/members", verifyAdmin, async (req, res) => {
+  const { name, email, phone, gender, training_slot, trainer_id, password } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ success: false, message: "Name and email are required" });
+  }
+
+  try {
+    const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO users (name, email, phone, gender, training_slot, trainer_id, password, role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'user')`,
+      [
+        name,
+        email,
+        phone || null,
+        gender || "male",
+        training_slot || "morning",
+        trainer_id || null,
+        password || "GymSwift@123",
+      ]
     );
 
-    return res.status(200).json({ success: true, members: rows });
+    return res.status(201).json({
+      success: true,
+      message: "Member created successfully",
+      user_id: result.insertId,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── PUT /admin/members/:id ─────────────────────────────────────
+// Admin updates member details
+app.put("/admin/members/:id", verifyAdmin, async (req, res) => {
+  const userId = req.params.id;
+  const { name, email, phone, gender, training_slot, trainer_id } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ success: false, message: "Name and email are required" });
+  }
+
+  try {
+    // Check if email is taken by someone else
+    const [existing] = await db.query(
+      "SELECT id FROM users WHERE email = ? AND id != ?",
+      [email, userId]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already in use by another member" });
+    }
+
+    await db.query(
+      `UPDATE users SET name = ?, email = ?, phone = ?, gender = ?,
+       training_slot = ?, trainer_id = ?
+       WHERE id = ? AND role = 'user'`,
+      [
+        name,
+        email,
+        phone || null,
+        gender || "male",
+        training_slot || "morning",
+        trainer_id || null,
+        userId,
+      ]
+    );
+
+    return res.status(200).json({ success: true, message: "Member updated successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -243,20 +318,15 @@ app.post("/admin/members/:id/membership", verifyAdmin, async (req, res) => {
   }
 
   try {
-    // Expire any existing active membership
     await db.query(
       `UPDATE memberships SET status = 'expired' WHERE user_id = ?`,
       [userId]
     );
-
-    // Insert new membership
     await db.query(
       `INSERT INTO memberships (user_id, plan, start_date, end_date, status)
        VALUES (?, ?, ?, ?, 'active')`,
       [userId, plan, start_date, end_date]
     );
-
-    // Record payment
     await db.query(
       `INSERT INTO payments (user_id, amount, method, status) VALUES (?, ?, ?, 'paid')`,
       [userId, amount, payment_method || "cash"]
@@ -272,13 +342,25 @@ app.post("/admin/members/:id/membership", verifyAdmin, async (req, res) => {
 // ── DELETE /admin/members/:id ──────────────────────────────────
 app.delete("/admin/members/:id", verifyAdmin, async (req, res) => {
   const userId = req.params.id;
-
   try {
     await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
     await db.query(`DELETE FROM memberships WHERE user_id = ?`, [userId]);
     await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
-
     return res.status(200).json({ success: true, message: "Member deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ── GET /admin/trainers ────────────────────────────────────────
+// Returns all users with role = 'trainer' for dropdown
+app.get("/admin/trainers", verifyAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
+    );
+    return res.status(200).json({ success: true, trainers: rows });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });
