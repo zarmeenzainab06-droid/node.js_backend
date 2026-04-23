@@ -190,22 +190,27 @@ app.get("/admin/activity", verifyAdmin, async (req, res) => {
 app.get("/admin/members", verifyAdmin, async (req, res) => {
   try {
     const search = req.query.search ? `%${req.query.search}%` : "%";
-    const statusFilter = req.query.status; // optional: active/expired/pending
+    const statusFilter = req.query.status;
 
     let query = `
       SELECT
         u.id, u.name, u.email, u.phone, u.gender, u.training_slot, u.created_at,
         u.trainer_id,
         t.name AS trainer_name,
-        m.plan, m.status AS membership_status, m.end_date
+        m.plan, m.status AS membership_status, m.end_date,
+        p.amount AS membership_fee
       FROM users u
       LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
-      LEFT JOIN memberships m ON m.user_id = u.id
-        AND m.id = (
-          SELECT id FROM memberships
-          WHERE user_id = u.id
-          ORDER BY created_at DESC LIMIT 1
-        )
+      LEFT JOIN memberships m ON m.id = (
+        SELECT id FROM memberships
+        WHERE user_id = u.id
+        ORDER BY created_at DESC LIMIT 1
+      )
+      LEFT JOIN payments p ON p.id = (
+        SELECT id FROM payments
+        WHERE user_id = u.id
+        ORDER BY created_at DESC LIMIT 1
+      )
       WHERE u.role = 'user'
         AND (u.name LIKE ? OR u.email LIKE ?)
     `;
@@ -221,8 +226,8 @@ app.get("/admin/members", verifyAdmin, async (req, res) => {
     const [rows] = await db.query(query, params);
     return res.status(200).json({ success: true, members: rows });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("FULL ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
