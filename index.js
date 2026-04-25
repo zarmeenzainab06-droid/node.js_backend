@@ -5,7 +5,7 @@ const port = 3000;
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
-app.use(cors());
+app.use(cors())
 app.use(express.json());
 
 const JWT_SECRET = "serve_ease";
