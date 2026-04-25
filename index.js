@@ -2,15 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = 3000;
-
+ 
 app.use(cors());
 app.use(express.json());
-
+ 
 // Routes
 app.use("/", require("./routes/authRoutes"));
 app.use("/admin", require("./routes/adminRoutes"));
 app.use("/admin/members", require("./routes/memberRoutes"));
-
-app.get("/", (req, res) => res.send("GymSwift API is running"));
-
+app.use("/admin/packages", require("./routes/packageRoutes"));
+ 
 app.listen(port, () => console.log(`GymSwift server running on port ${port}`));
