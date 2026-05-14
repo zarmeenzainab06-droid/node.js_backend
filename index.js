@@ -12,4 +12,4 @@ app.use("/admin", require("./routes/adminRoutes"));
 app.use("/admin/members", require("./routes/memberRoutes"));
 app.use("/admin/packages", require("./routes/packageRoutes"));
  
-app.listen(port, () => console.log(`GymSwift server running on port ${port}`));
+app.listen(port, () => console.log(`GymFitex server running on port ${port}`));

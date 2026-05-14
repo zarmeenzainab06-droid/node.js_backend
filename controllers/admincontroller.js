@@ -1,21 +1,15 @@
-const db = require("../config/db");
+const UserModel = require("../models/userModel");
+const MembershipModel = require("../models/membershipModel");
+const PaymentModel = require("../models/paymentModel");
+const ActivityModel = require("../models/activityModel");
 
 const getDashboardStats = async (req, res) => {
   try {
-    const [[{ totalMembers }]] = await db.query(
-      `SELECT COUNT(*) AS totalMembers FROM users WHERE role = 'user'`
-    );
-    const [[{ active }]] = await db.query(
-      `SELECT COUNT(*) AS active FROM memberships
-       WHERE status = 'active' AND end_date >= CURDATE()`
-    );
-    const [[{ expired }]] = await db.query(
-      `SELECT COUNT(*) AS expired FROM memberships
-       WHERE status = 'expired' OR end_date < CURDATE()`
-    );
-    const [[{ pendingPayments }]] = await db.query(
-      `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
-    );
+    const totalMembers = await UserModel.countTotalMembers();
+    const active = await MembershipModel.countActive();
+    const expired = await MembershipModel.countExpired();
+    const pendingPayments = await PaymentModel.countPending();
+
     return res.status(200).json({
       success: true,
       stats: { totalMembers, active, expired, pendingPayments },
@@ -28,23 +22,7 @@ const getDashboardStats = async (req, res) => {
 
 const getRecentActivity = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT
-         u.name AS memberName,
-         CASE
-           WHEN p.id IS NOT NULL THEN 'Payment received'
-           WHEN m.id IS NOT NULL THEN 'Membership renewed'
-           ELSE 'New member joined'
-         END AS action,
-         COALESCE(m.status, 'active') AS status,
-         TIMESTAMPDIFF(HOUR, COALESCE(p.created_at, m.start_date, u.created_at), NOW()) AS hoursAgo
-       FROM users u
-       LEFT JOIN memberships m ON m.user_id = u.id
-       LEFT JOIN payments p ON p.user_id = u.id
-       WHERE u.role = 'user'
-       ORDER BY COALESCE(p.created_at, m.start_date, u.created_at) DESC
-       LIMIT 10`
-    );
+    const rows = await ActivityModel.getRecentActivity();
     const activity = rows.map((r) => ({
       memberName: r.memberName,
       action: r.action,
@@ -63,10 +41,8 @@ const getRecentActivity = async (req, res) => {
 
 const getTrainers = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
-    );
-    return res.status(200).json({ success: true, trainers: rows });
+    const trainers = await UserModel.findAllTrainers();
+    return res.status(200).json({ success: true, trainers });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });
