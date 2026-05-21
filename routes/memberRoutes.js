@@ -14,10 +14,17 @@ router.get("/", verifyAdmin, getAllMembers);
 router.post("/", verifyAdmin, createMember);
 router.put("/:id", verifyAdmin, updateMember);
 router.delete("/:id", verifyAdmin, deleteMember);
-router.post("/:id/membership", verifyAdmin, assignMembership);
+
 
 // uploadScreenshot middleware runs before assignMembership
 // It parses multipart/form-data and saves the file if present
-router.post("/:id/membership", verifyAdmin, uploadScreenshot, assignMembership);
-
+router.post("/:id/membership", verifyAdmin, (req, res, next) => {
+  uploadScreenshot(req, res, (err) => {
+    if (err) {
+      console.error("Multer error:", err.message);
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, assignMembership);
 module.exports = router;
