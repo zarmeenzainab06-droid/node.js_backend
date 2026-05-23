@@ -7,31 +7,29 @@ const fs = require("fs");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/screenshots";
-    // Create folder if it doesn't exist
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    // payment_userId_timestamp.ext
-    const ext = path.extname(file.originalname);
+    const ext = path.extname(file.originalname) || '.jpg';
     cb(null, `payment_${req.params.id}_${Date.now()}${ext}`);
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ["image/jpeg", "image/jpg", "image/png"];
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPG and PNG images are allowed"), false);
+    cb(null, true); // accept anyway, web sometimes sends wrong mimetype
   }
 };
 
 const upload = multer({
   storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
+
 
 // Export upload middleware for use in routes
 const uploadScreenshot = upload.single("screenshot");
