@@ -8,12 +8,14 @@ const {
   deleteMember,
   assignMembership,
   uploadScreenshot,
+   getMemberById,
 } = require("../controllers/memberController");
 
-router.get("/", verifyAdmin, getAllMembers);
-router.post("/", verifyAdmin, createMember);
-router.put("/:id", verifyAdmin, updateMember);
-router.delete("/:id", verifyAdmin, deleteMember);
+router.get("/", verifyAdmin, getAllMembers);// Get all members
+router.post("/", verifyAdmin, createMember);// Create member
+router.get('/:id', verifyAdmin, getMemberById);///for edit member screenn with idddddd
+router.put("/:id", verifyAdmin, updateMember);// Update member
+router.delete("/:id", verifyAdmin, deleteMember);// Delete member
 
 
 // uploadScreenshot middleware runs before assignMembership

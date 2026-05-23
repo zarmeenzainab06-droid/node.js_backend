@@ -85,6 +85,37 @@ const getAllMembers = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+//tadaaaa
+const getMemberById = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT u.id, u.name, u.email, u.phone, u.gender, u.training_slot,
+             u.trainer_id, t.name AS trainer_name,
+             pkg.id AS package_id, pkg.name AS package_name,
+             pkg.duration AS package_duration, pkg.price AS package_price,
+             m.status AS membership_status, m.end_date,
+             p.amount AS membership_fee, p.method AS payment_method,
+             p.screenshot AS payment_screenshot
+      FROM users u
+      LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
+      LEFT JOIN memberships m ON m.id = (
+        SELECT id FROM memberships WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+      )
+      LEFT JOIN packages pkg ON pkg.id = m.package_id
+      LEFT JOIN payments p ON p.id = (
+        SELECT id FROM payments WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+      )
+      WHERE u.id = ? AND u.role = 'user'
+    `, [req.params.id]);
+
+    if (rows.length === 0)
+      return res.status(404).json({ success: false, message: 'Member not found' });
+
+    return res.status(200).json({ success: true, member: rows[0] });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // ── POST /admin/members ────────────────────────────────────────
 const createMember = async (req, res) => {
@@ -171,8 +202,10 @@ const assignMembership = async (req, res) => {
   if (!package_id || !start_date || !end_date || !amount)
     return res.status(400).json({ success: false, message: "Missing required fields" });
 
+  
   // Screenshot path — null if cash payment
-  const screenshotPath = req.file ? req.file.path : null;
+  const screenshotPath = req.file ? req.file.path : (existing_screenshot || null);
+  console.log(screenshotPath)
 
   try {
     // Expire existing memberships
@@ -204,6 +237,7 @@ const assignMembership = async (req, res) => {
 
 module.exports = {
   getAllMembers,
+  getMemberById,
   createMember,
   updateMember,
   deleteMember,
