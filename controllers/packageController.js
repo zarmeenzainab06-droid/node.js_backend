@@ -10,28 +10,28 @@ const getAllPackages = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
+// create the packgeee
 const createPackage = async (req, res) => {
-  const { name, duration, price, description, is_active } = req.body;
+  const { name, duration, price, description, is_active, from_time, to_time } = req.body;
   if (!name || !duration || !price)
     return res.status(400).json({ success: false, message: "Name, duration and price are required" });
 
   try {
-    const packageId = await PackageModel.createPackage({ name, duration, price, description, is_active });
+    const packageId = await PackageModel.createPackage({ name, duration, price, description, is_active, from_time, to_time });// pass to model
     return res.status(201).json({ success: true, message: "Package created successfully", package_id: packageId });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
+// updateee the package 
 const updatePackage = async (req, res) => {
-  const { name, duration, price, description, is_active } = req.body;
+  const { name, duration, price, description, is_active, from_time, to_time } = req.body;
   if (!name || !duration || !price)
     return res.status(400).json({ success: false, message: "Name, duration and price are required" });
 
   try {
-    const affected = await PackageModel.updatePackage(req.params.id, { name, duration, price, description, is_active });
+    const affected = await PackageModel.updatePackage(req.params.id, { name, duration, price, description, is_active, from_time, to_time });// pass to model
     if (affected === 0)
       return res.status(404).json({ success: false, message: "Package not found" });
 
@@ -41,7 +41,7 @@ const updatePackage = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
+// delete packgeee
 const deletePackage = async (req, res) => {
   try {
     await MembershipModel.nullifyPackageReferences(req.params.id);

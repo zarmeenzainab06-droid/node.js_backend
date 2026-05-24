@@ -8,20 +8,21 @@ const findAll = async (activeOnly = false) => {
   return rows;
 };
 
-const createPackage = async ({ name, duration, price, description, is_active }) => {
+const createPackage = async ({ name, duration, price, description, is_active, from_time, to_time }) => {
   const [result] = await db.query(
-    `INSERT INTO packages (name, duration, price, description, is_active)
-     VALUES (?, ?, ?, ?, ?)`,
-    [name, duration, price, description || null, is_active ?? 1]
+    `INSERT INTO packages (name, duration, price, description, is_active, from_time, to_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [name, duration, price, description || null, is_active ?? 1, from_time || null, to_time || null]
   );
   return result.insertId;
 };
 
-const updatePackage = async (packageId, { name, duration, price, description, is_active }) => {
+const updatePackage = async (packageId, { name, duration, price, description, is_active, from_time, to_time }) => {
   const [result] = await db.query(
     `UPDATE packages SET name = ?, duration = ?, price = ?,
-     description = ?, is_active = ? WHERE id = ?`,
-    [name, duration, price, description || null, is_active ?? 1, packageId]
+     description = ?, is_active = ?, from_time = ?, to_time =?
+      WHERE id = ?`,
+    [name, duration, price, description || null, is_active ?? 1,from_time || null, to_time || null, packageId]
   );
   return result.affectedRows;
 };
