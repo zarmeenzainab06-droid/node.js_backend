@@ -19,7 +19,7 @@ const createMembership = async ({ userId, package_id, start_date, end_date }) =>
 const countActive = async () => {
   const [[{ active }]] = await db.query(
     `SELECT COUNT(*) AS active FROM memberships
-     WHERE status = 'active' AND end_date >= CURDATE()`
+     WHERE status = 'active'`
   );
   return active;
 };
