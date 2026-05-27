@@ -1,4 +1,4 @@
-const db = require("../config/db");
+const MemberModel = require("../models/memberModel");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -40,46 +40,10 @@ const getAllMembers = async (req, res) => {
     const search = req.query.search ? `%${req.query.search}%` : "%";
     const statusFilter = req.query.status;
 
-    let query = `
-      SELECT
-        u.id, u.name, u.email, u.phone, u.gender, u.training_slot, u.created_at,
-        u.trainer_id,
-        t.name AS trainer_name,
-        pkg.id AS package_id,
-        pkg.name AS package_name,
-        pkg.duration AS package_duration,
-        pkg.price AS package_price,
-        m.status AS membership_status, m.end_date,
-        p.amount AS membership_fee,
-        p.method AS payment_method,
-        p.screenshot AS payment_screenshot
-      FROM users u
-      LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
-      LEFT JOIN memberships m ON m.id = (
-        SELECT id FROM memberships
-        WHERE user_id = u.id
-        ORDER BY created_at DESC LIMIT 1
-      )
-      LEFT JOIN packages pkg ON pkg.id = m.package_id
-      LEFT JOIN payments p ON p.id = (
-        SELECT id FROM payments
-        WHERE user_id = u.id
-        ORDER BY created_at DESC LIMIT 1
-      )
-      WHERE u.role = 'user'
-        AND (u.name LIKE ? OR u.email LIKE ?)
-    `;
-    const params = [search, search];
-
-    if (statusFilter && statusFilter !== "all") {
-      query += ` AND m.status = ?`;
-      params.push(statusFilter);
-    }
-
-    query += ` ORDER BY u.created_at DESC`;
-
-    const [rows] = await db.query(query, params);
-    return res.status(200).json({ success: true, members: rows });
+    const rows = await MemberModel.getAllMembers(
+      search,
+      statusFilter);
+        return res.status(200).json({ success: true, members: rows });
   } catch (err) {
     console.error("FULL ERROR:", err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -88,30 +52,16 @@ const getAllMembers = async (req, res) => {
 //tadaaaa
 const getMemberById = async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      SELECT u.id, u.name, u.email, u.phone, u.gender, u.training_slot,
-             u.trainer_id, t.name AS trainer_name,
-             pkg.id AS package_id, pkg.name AS package_name,
-             pkg.duration AS package_duration, pkg.price AS package_price,
-             m.status AS membership_status, m.end_date,
-             p.amount AS membership_fee, p.method AS payment_method,
-             p.screenshot AS payment_screenshot
-      FROM users u
-      LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
-      LEFT JOIN memberships m ON m.id = (
-        SELECT id FROM memberships WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
-      )
-      LEFT JOIN packages pkg ON pkg.id = m.package_id
-      LEFT JOIN payments p ON p.id = (
-        SELECT id FROM payments WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
-      )
-      WHERE u.id = ? AND u.role = 'user'
-    `, [req.params.id]);
+    const rows = await MemberModel.getMemberById(
+      
+     req.params.id);
 
     if (rows.length === 0)
-      return res.status(404).json({ success: false, message: 'Member not found' });
+      return res.status(404).json({ 
+    success: false, message: 'Member not found' });
 
-    return res.status(200).json({ success: true, member: rows[0] });
+    return res.status(200).json({ 
+      success: true, member: rows[0] });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -124,25 +74,24 @@ const createMember = async (req, res) => {
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
   try {
-    const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+    const [existing] = await MemberModel.findByEmail(email);
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    const [result] = await db.query(
-      `INSERT INTO users (name, email, phone, gender, training_slot, trainer_id, password, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'user')`,
-      [
-        name, email, phone || null,
-        gender || "male",
-        training_slot || "morning",
-        trainer_id || null,
-        password || "GymSwift@123",
-      ]
-    );
+    const userId = await MemberModel.createMember({ name,
+      email,
+      phone,
+      gender,
+      training_slot,
+      trainer_id,
+      password,
+
+    });
+      
     return res.status(201).json({
       success: true,
       message: "Member created successfully",
-      user_id: result.insertId,
+      user_id: userIdId
     });
   } catch (err) {
     console.error(err);
@@ -158,20 +107,23 @@ const updateMember = async (req, res) => {
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
   try {
-    const [existing] = await db.query(
-      "SELECT id FROM users WHERE email = ? AND id != ?",
-      [email, userId]
+    const existing = await MemberModel.findByEmailExceptUser(
+      email
+      //  ,userId for checking
     );
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already in use" });
 
-    await db.query(
-      `UPDATE users SET name = ?, email = ?, phone = ?, gender = ?,
-       training_slot = ?, trainer_id = ?
-       WHERE id = ? AND role = 'user'`,
-      [name, email, phone || null, gender || "male",
-       training_slot || "morning", trainer_id || null, userId]
-    );
+    await MemberModel.updateMember (userId,{
+      name,
+      email,
+      phone,
+      gender,
+      training_slot,
+      trainer_id,
+    
+      
+    });
     return res.status(200).json({ success: true, message: "Member updated successfully" });
   } catch (err) {
     console.error(err);
@@ -183,9 +135,16 @@ const updateMember = async (req, res) => {
 const deleteMember = async (req, res) => {
   const userId = req.params.id;
   try {
-    await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
-    await db.query(`DELETE FROM memberships WHERE user_id = ?`, [userId]);
-    await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
+    const affected = await MemberModel.deleteMember(
+      req.params.id
+    );
+
+    if (affected === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Member not found",
+      });
+    } 
     return res.status(200).json({ success: true, message: "Member deleted successfully" });
   } catch (err) {
     console.error(err);
@@ -204,28 +163,24 @@ const assignMembership = async (req, res) => {
 
   
   // Screenshot path — null if cash payment
-  const screenshotPath = req.file ? req.file.path : (existing_screenshot || null);
+  const screenshotPath = req.file ? req.file.path : null;
+  //  (existing_screenshot || null); for checking
   console.log(screenshotPath)
 
   try {
     // Expire existing memberships
-    await db.query(
-      `UPDATE memberships SET status = 'expired' WHERE user_id = ?`,
-      [userId]
+    await MemberModel.expireMemberships(
+      userId
     );
 
-    // Insert new membership
-    await db.query(
-      `INSERT INTO memberships (user_id, package_id, start_date, end_date, status)
-       VALUES (?, ?, ?, ?, 'active')`,
-      [userId, package_id, start_date, end_date]
+    // create new membership
+    await MemberModel.createMembership (
+      userId, package_id, start_date, end_date
     );
 
     // Record payment with screenshot
-    await db.query(
-      `INSERT INTO payments (user_id, amount, method, status, screenshot)
-       VALUES (?, ?, ?, 'paid', ?)`,
-      [userId, amount, payment_method || "cash", screenshotPath]
+    await MemberModel.createPayment (
+      userId, amount, payment_method , screenshotPath
     );
 
     return res.status(201).json({ success: true, message: "Membership assigned successfully" });
