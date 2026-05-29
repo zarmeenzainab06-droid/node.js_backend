@@ -1,5 +1,5 @@
 const TrainerModel = require("../models/trainerModel");
-
+const bcrypt = require("bcrypt");
 
 // ── GET /admin/trainers ────────────────────────────────────────
 const getAllTrainers = async (req, res) => {
@@ -27,24 +27,26 @@ const getTrainerById = async (req, res) => {
 
 // ── POST /admin/trainers ───────────────────────────────────────
 const createTrainer = async (req, res) => {
-  const { name, email, phone, gender, age, specialization, experience, training_slot } = req.body;
+  const { name, email, password, phone, gender, specialization, experience, training_slot } = req.body;
 
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
+ 
+  if (!password)                          // for the passwordd thingg
+    return res.status(400).json({ success: false, message: "Password is required" });
 
   try {
     const [existing] = await TrainerModel.findByEmail(email);
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    const hashedPassword = await bcrypt.hash("GymSwift@123", 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const insertId = await TrainerModel.createTrainer({
       name,
       email,
       phone,
       gender,
-      age,
       specialization,
       experience,
       training_slot,
@@ -65,7 +67,7 @@ const createTrainer = async (req, res) => {
 // ── PUT /admin/trainers/:id ────────────────────────────────────
 const updateTrainer = async (req, res) => {
   const trainerId = req.params.id;
-  const { name, email, phone, gender, age, specialization, experience, training_slot, is_active } = req.body;
+  const { name, email, phone, gender, specialization, experience, training_slot, is_active } = req.body;
 
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
@@ -80,7 +82,6 @@ const updateTrainer = async (req, res) => {
       email,
       phone,
       gender,
-      age,
       specialization,
       experience,
       training_slot,
