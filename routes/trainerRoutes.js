@@ -158,6 +158,57 @@ router.get("/activity", verifyTrainer, async (req, res) => {
 });
  
 // ─────────────────────────────────────────────────────────────
+// GET /trainer/members/:id
+// Returns: single member profile — only if assigned to this trainer
+// ─────────────────────────────────────────────────────────────
+router.get("/members/:id", verifyTrainer, async (req, res) => {
+  const trainerId = req.user.id;
+  const memberId  = req.params.id;
+  try {
+    const [[member]] = await db.query(
+      `SELECT
+         u.id,
+         u.name,
+         u.email,
+         u.phone,
+         u.gender,
+         u.training_slot,
+         u.created_at,
+         COALESCE(ms.status, 'pending') AS membership_status,
+         ms.end_date,
+         p.name                         AS plan,
+         p.duration                     AS plan_duration,
+         p.price                        AS plan_price
+       FROM users u
+       LEFT JOIN memberships ms
+         ON ms.user_id = u.id
+         AND ms.id = (
+           SELECT id FROM memberships
+           WHERE user_id = u.id
+           ORDER BY created_at DESC LIMIT 1
+         )
+       LEFT JOIN packages p ON ms.package_id = p.id
+       WHERE u.id = ?
+         AND u.role = 'user'
+         AND u.trainer_id = ?`,
+      [memberId, trainerId]
+    );
+ 
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found or not assigned to you',
+      });
+    }
+ 
+    res.json({ success: true, member });
+  } catch (err) {
+    console.error("Member profile error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+ 
+// ─────────────────────────────────────────────────────────────
 // GET /trainer/profile
 // ─────────────────────────────────────────────────────────────
 router.get("/profile", verifyTrainer, async (req, res) => {
@@ -180,3 +231,4 @@ router.get("/profile", verifyTrainer, async (req, res) => {
 });
  
 module.exports = router;
+ 
