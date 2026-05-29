@@ -73,8 +73,11 @@ const createMember = async (req, res) => {
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
+  // for password
+  if (!password)
+    return res.status(400).json({ success: false, message: "Password is required" });
   try {
-    const [existing] = await MemberModel.findByEmail(email);
+    const existing = await MemberModel.findByEmail(email);
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
@@ -91,7 +94,7 @@ const createMember = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Member created successfully",
-      user_id: userIdId
+      user_id: userId
     });
   } catch (err) {
     console.error(err);
@@ -107,10 +110,10 @@ const updateMember = async (req, res) => {
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
   try {
-    const existing = await MemberModel.findByEmailExceptUser(
-      email
+    const existing = await MemberModel.findByEmailExceptUser
+      (email, userId);
       //  ,userId for checking
-    );
+    
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already in use" });
 

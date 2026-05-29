@@ -1,4 +1,6 @@
 const db = require ("../config/db")
+const bcrypt = require("bcrypt");   
+
 
 // ── GET /admin/members ─────────────────────────────────────────
 const getAllMembers = async (search, statusFilter) => {
@@ -103,6 +105,8 @@ const createMember = async ({
   trainer_id,
   password,
 }) => {
+    const hashedPassword = await bcrypt.hash(password, 10);   // ← hash it
+
   const [result] = await db.query(
     `
     INSERT INTO users
@@ -116,7 +120,7 @@ const createMember = async ({
       gender || "male",
       training_slot || "morning",
       trainer_id || null,
-      password || "GymSwift@123",
+      hashedPassword,            // ← store the hash, not plain text
     ]
   );
 
