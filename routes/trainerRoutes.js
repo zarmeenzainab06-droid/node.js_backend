@@ -210,20 +210,83 @@ router.get("/members/:id", verifyTrainer, async (req, res) => {
  
 // ─────────────────────────────────────────────────────────────
 // GET /trainer/profile
+// Returns: full trainer profile with stats from DB
 // ─────────────────────────────────────────────────────────────
 router.get("/profile", verifyTrainer, async (req, res) => {
-  const userId = req.user.id;
+  const trainerId = req.user.id;
   try {
+    // ── Trainer basic info ─────────────────────────────────
     const [[profile]] = await db.query(
-      `SELECT id, name, email, phone, gender, training_slot, created_at
+      `SELECT
+         id,
+         name,
+         email,
+         phone,
+         gender,
+         training_slot,
+         created_at,
+         specialty,
+         experience_years,
+         certifications
        FROM users
        WHERE id = ? AND role = 'trainer'`,
-      [userId]
+      [trainerId]
     );
+ 
     if (!profile) {
-      return res.status(404).json({ success: false, message: "Profile not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+      });
     }
-    res.json({ success: true, profile });
+ 
+    // ── Assigned members count ─────────────────────────────
+    const [[{ assignedMembers }]] = await db.query(
+      `SELECT COUNT(*) AS assignedMembers
+       FROM users
+       WHERE role = 'user' AND trainer_id = ?`,
+      [trainerId]
+    );
+ 
+    // ── Sessions completed = total memberships of assigned members
+    const [[{ sessionsCompleted }]] = await db.query(
+      `SELECT COUNT(*) AS sessionsCompleted
+       FROM memberships ms
+       JOIN users u ON ms.user_id = u.id
+       WHERE u.trainer_id = ? AND u.role = 'user'`,
+      [trainerId]
+    );
+ 
+    // ── Split certifications string into array ─────────────
+    const certList = profile.certifications
+      ? profile.certifications.split(',').map(c => c.trim())
+      : [];
+ 
+    // ── Format joined date ─────────────────────────────────
+    const joined = new Date(profile.created_at);
+    const months = [
+      'January','February','March','April','May','June',
+      'July','August','September','October','November','December'
+    ];
+    const joinedDate =
+      `${months[joined.getMonth()]} ${joined.getFullYear()}`;
+ 
+    res.json({
+      success: true,
+      profile: {
+        id:               profile.id,
+        name:             profile.name,
+        email:            profile.email,
+        phone:            profile.phone     || 'N/A',
+        gender:           profile.gender    || 'N/A',
+        specialty:        profile.specialty || 'Fitness Trainer',
+        experienceYears:  profile.experience_years || 0,
+        certifications:   certList,
+        joinedDate,
+        assignedMembers:  Number(assignedMembers),
+        sessionsCompleted: Number(sessionsCompleted),
+      },
+    });
   } catch (err) {
     console.error("Profile error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -231,4 +294,3 @@ router.get("/profile", verifyTrainer, async (req, res) => {
 });
  
 module.exports = router;
- 
