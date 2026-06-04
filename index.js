@@ -14,5 +14,7 @@ app.use("/admin/packages", require("./routes/packageRoutes"));
 app.use("/admin/trainers", require("./routes/trainerRoutes")); // for the trainerss
 const adminProfileRoutes = require("./routes/adminProfileRoutes");
 app.use("/admin/profile", adminProfileRoutes);
+app.use("/admin/payments", require("./routes/paymentRoutes")); // ← add this
+
 
 app.listen(port, () => console.log(`GymFitex server running on port ${port}`));

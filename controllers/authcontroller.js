@@ -1,12 +1,21 @@
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const UserModel = require("../models/userModel");
 const JWT_SECRET = "serve_ease";
 
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await UserModel.findByEmailAndPassword(email, password);
+    const user = await UserModel.findByEmail(email);
     if (!user)
+      return res.status(200).json({ success: false, message: "Invalid email or password" });
+
+    const isHashed = user.password.startsWith('$2b$') || user.password.startsWith('$2a$');
+    const match = isHashed
+      ? await bcrypt.compare(password, user.password)
+      : password === user.password;
+
+    if (!match)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 
     const token = jwt.sign(
@@ -31,7 +40,11 @@ const signup = async (req, res) => {
     if (existing)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    const userId = await UserModel.createUser({ name, phone, gender, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = await UserModel.createUser({
+      name, phone, gender, email,
+      password: hashedPassword,
+    });
     return res.status(201).json({ success: true, message: "Account created successfully", user_id: userId });
   } catch (err) {
     console.error(err);
