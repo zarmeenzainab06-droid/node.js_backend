@@ -95,15 +95,18 @@ router.get("/members", verifyTrainer, async (req, res) => {
  
 // ─────────────────────────────────────────────────────────────
 // GET /trainer/schedule/today
+// Returns members grouped by slot with workout_type
+// Status (upcoming/completed) calculated by Flutter based on time
 // ─────────────────────────────────────────────────────────────
 router.get("/schedule/today", verifyTrainer, async (req, res) => {
   const trainerId = req.user.id;
   try {
     const [rows] = await db.query(
       `SELECT
-         u.id           AS member_id,
-         u.name         AS memberName,
-         u.training_slot
+         u.id                                            AS member_id,
+         u.name                                          AS memberName,
+         u.training_slot,
+         COALESCE(u.workout_type, 'General Fitness')     AS workout_type
        FROM users u
        WHERE u.role = 'user'
          AND u.trainer_id = ?
@@ -209,6 +212,64 @@ router.get("/members/:id", verifyTrainer, async (req, res) => {
 });
  
 // ─────────────────────────────────────────────────────────────
+// PUT /trainer/profile
+// Body: { name, phone, specialty }
+// ─────────────────────────────────────────────────────────────
+router.put("/profile", verifyTrainer, async (req, res) => {
+  const userId = req.user.id;
+  const { name, phone, specialty } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: "Name is required" });
+  }
+  try {
+    await db.query(
+      `UPDATE users SET name = ?, phone = ?, specialty = ? WHERE id = ? AND role = 'trainer'`,
+      [name, phone || null, specialty || null, userId]
+    );
+    res.json({ success: true, message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+ 
+// ─────────────────────────────────────────────────────────────
+// PUT /trainer/change-password
+// Body: { currentPassword, newPassword }
+// ─────────────────────────────────────────────────────────────
+router.put("/change-password", verifyTrainer, async (req, res) => {
+  const userId = req.user.id;
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Current and new password are required",
+    });
+  }
+  try {
+    // Verify current password
+    const [[user]] = await db.query(
+      `SELECT password FROM users WHERE id = ? AND role = 'trainer'`,
+      [userId]
+    );
+    if (!user || user.password !== currentPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+    await db.query(
+      `UPDATE users SET password = ? WHERE id = ?`,
+      [newPassword, userId]
+    );
+    res.json({ success: true, message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+ 
+// ─────────────────────────────────────────────────────────────
 // GET /trainer/profile
 // Returns: full trainer profile with stats from DB
 // ─────────────────────────────────────────────────────────────
@@ -294,3 +355,4 @@ router.get("/profile", verifyTrainer, async (req, res) => {
 });
  
 module.exports = router;
+ 
