@@ -3,11 +3,11 @@ const router = express.Router();
 const trainerController = require("../controllers/trainerController");
 const { verifyAdmin } = require("../middleware/auth");
 const{getAllTrainers,
-    getTrainerById,
-    createTrainer,
-    updateTrainer,
-    deleteTrainer,
-    getTrainerMembers,
+     getTrainerById,
+     createTrainer,
+     updateTrainer,
+     deleteTrainer,
+     getTrainerMembers,
 }
 = require("../controllers/trainerController");
 
