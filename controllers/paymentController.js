@@ -12,6 +12,10 @@ const getAllPayments = async (req, res) => {
       membership_month: req.query.membership_month,
     };
     const [rows] = await PaymentModel.getAll(filters);
+// ← DEBUG: log first row to confirm membership_month is returned
+    if (rows.length > 0) {
+      console.log('First payment row:', JSON.stringify(rows[0], null, 2));
+    }
     const mapped = rows.map(r => ({ ...r, payment_status: r.status })); // remap for Flutter
     return res.status(200).json({ success: true, data: mapped });
   } catch (err) {
@@ -41,6 +45,8 @@ const createPayment = async (req, res) => {
     method, status, payment_date,
   } = req.body;
 
+  console.log('CREATE body:', req.body); // ← add this line
+  console.log('membership_month received:', membership_month); // ← and thi
   if (!user_id)
     return res.status(400).json({ success: false, message: 'user_id is required' });
 
