@@ -6,11 +6,20 @@ const bcrypt = require("bcrypt"); // Import bcrypt for password hashing
 const getAllTrainers = async (req, res) => {
   try {
     const search = req.query.search ? `%${req.query.search}%` : "%"; // Prepare search pattern for SQL LIKE query
+   
     const [rows] = await TrainerModel.getAllTrainers(search); // Fetch trainers from database
-    return res.status(200).json({ success: true, trainers: rows }); // Send successful response with trainer data
+   
+    return res.status(200).json({ 
+      success: true, 
+      trainers: rows
+     }); // Send successful response with trainer data
   } catch (err) {
     console.error("getAllTrainers error:", err.message); // Log error for debugging
-    return res.status(500).json({ success: false, message: err.message }); // Send server error response
+    
+    return res.status(500).json({ 
+      success: false,
+      message: err.message 
+    }); // Send server error response
   }
 };
 
@@ -19,11 +28,24 @@ const getAllTrainers = async (req, res) => {
 const getTrainerById = async (req, res) => {
   try {
     const [rows] = await TrainerModel.getTrainerById(req.params.id); // Fetch trainer using ID
+    
     if (rows.length === 0)
-      return res.status(404).json({ success: false, message: "Trainer not found" }); // Handle case when trainer does not exist
-    return res.status(200).json({ success: true, trainer: rows[0] }); // Return trainer data
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message }); // Handle server error
+      return res.status(404).json({ 
+       success: false, 
+       message: "Trainer not found" 
+    }); // Handle case when trainer does not exist
+    
+    return res.status(200).json({ 
+      success: true,
+      trainer: rows[0] 
+    }); // Return trainer data
+  } 
+  catch (err) {
+    
+    return res.status(500).json({ 
+      success: false,
+      message: err.message 
+    }); // Handle server error
   }
 };
 
@@ -42,17 +64,28 @@ const createTrainer = async (req, res) => {
   } = req.body; // Extract trainer details from request body
 
   if (!name || !email)
-    return res.status(400).json({ success: false, message: "Name and email are required" }); // Validate required fields
+    return res.status(400).json({ 
+     success: false,
+     message: "Name and email are required" 
+    }); // Validate required fields
 
   if (!password)
-    return res.status(400).json({ success: false, message: "Password is required" }); // Ensure password is provided
+    return res.status(400).json({ 
+     success: false, 
+    message: "Password is required" 
+  }); 
 
+  // Check if email already exists in database
   try {
-    const [existing] = await TrainerModel.findByEmail(email); // Check if email already exists in database
+    const [existing] = await TrainerModel.findByEmail(email); 
+    
     if (existing.length > 0)
-      return res.status(400).json({ success: false, message: "Email already registered" }); // Prevent duplicate trainers
+      return res.status(400).json({ 
+       success: false,
+       message: "Email already registered" }); // Prevent duplicate trainers
 
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash password before storing in database
+       // Hash password before storing in database
+    const hashedPassword = await bcrypt.hash(password, 10); 
 
     const insertId = await TrainerModel.createTrainer({
       name,
@@ -70,16 +103,23 @@ const createTrainer = async (req, res) => {
       message: "Trainer created successfully",
       trainer_id: insertId,
     }); // Return success response with new trainer ID
-  } catch (err) {
+  } 
+  
+  catch (err) {
     console.error("createTrainer error:", err); // Log error for debugging
-    return res.status(500).json({ success: false, message: err.message }); // Handle server error
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message }); // Handle server error
   }
 };
 
 // PUT /admin/trainers/:id
 // This function updates an existing trainer's information
 const updateTrainer = async (req, res) => {
-  const trainerId = req.params.id; // Get trainer ID from URL parameter
+  
+  // Get trainer ID from URL parameter
+  const trainerId = req.params.id; 
   const {
     name,
     email,
@@ -89,15 +129,20 @@ const updateTrainer = async (req, res) => {
     experience,
     training_slot,
     is_active,
-  } = req.body; // Extract updated data from request body
+  } = req.body; 
 
   if (!name || !email)
-    return res.status(400).json({ success: false, message: "Name and email are required" }); // Validate required fields
+    return res.status(400).json({ 
+     success: false,
+     message: "Name and email are required" }); // Validate required fields
 
   try {
     const [existing] = await TrainerModel.findByEmailExceptUser(email, trainerId); // Check email uniqueness excluding current trainer
+    
     if (existing.length > 0)
-      return res.status(400).json({ success: false, message: "Email already in use" }); // Prevent duplicate email usage
+      return res.status(400).json({ 
+       success: false, 
+       message: "Email already in use" }); // Prevent duplicate email usage
 
     await TrainerModel.updateTrainer(trainerId, {
       name,
@@ -113,10 +158,15 @@ const updateTrainer = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Trainer updated successfully",
-    }); // Send success response
-  } catch (err) {
+    }); 
+  } 
+  catch (err) {
     console.error("updateTrainer error:", err); // Log error for debugging
-    return res.status(500).json({ success: false, message: err.message }); // Handle server error
+    
+    return res.status(500).json({ 
+      success: false,
+       message: err.message
+    }); 
   }
 };
 
@@ -132,10 +182,15 @@ const deleteTrainer = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Trainer deleted successfully",
-    }); // Return success response
-  } catch (err) {
-    console.error("deleteTrainer error:", err); // Log error for debugging
-    return res.status(500).json({ success: false, message: err.message }); // Handle server error
+    }); 
+  } 
+  catch (err) {
+    console.error("deleteTrainer error:", err); 
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message
+    }); 
   }
 };
 
@@ -143,10 +198,17 @@ const deleteTrainer = async (req, res) => {
 // This function retrieves all members assigned to a specific trainer
 const getTrainerMembers = async (req, res) => {
   try {
-    const [rows] = await TrainerModel.getTrainerMembers(req.params.id); // Fetch trainer's members
-    return res.status(200).json({ success: true, members: rows }); // Return member list
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message }); // Handle server error
+    // Fetch trainer's members
+    const [rows] = await TrainerModel.getTrainerMembers(req.params.id); 
+    
+    return res.status(200).json({
+       success: true,
+       members: rows 
+      }); // Return member list
+  } 
+  catch (err) {
+   
+    return res.status(500).json({ success: false, message: err.message }); 
   }
 };
 

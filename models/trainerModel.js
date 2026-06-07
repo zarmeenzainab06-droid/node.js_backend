@@ -1,4 +1,4 @@
-const db = require("../config/db"); // adjust path to your db config
+const db = require("../config/db"); 
 
 // ── GET all trainers (with optional search) ────────────────────
 const getAllTrainers = (search = "%") => {
@@ -13,6 +13,7 @@ const getAllTrainers = (search = "%") => {
     [search, search, search]
   );
 };
+// Retrieve a trainer by ID
 
 const getTrainerById = (id) => {
   return db.query(
@@ -31,7 +32,7 @@ const findByEmail = (email) => {
     [email]
   );
 };
-
+// Check if email exists excluding current trainer
 const findByEmailExceptUser = (email, userId) => {
   return db.query(
     `SELECT id FROM users WHERE email = ? AND id != ? AND role = 'trainer'`,
@@ -41,8 +42,14 @@ const findByEmailExceptUser = (email, userId) => {
 
 // ── CREATE trainer ─────────────────────────────────────────────
 const createTrainer = async ({
-  name, email, phone, gender,
-  specialization, experience, training_slot, password,
+  name,
+  email,
+  phone,
+  gender,
+  specialization,
+  experience,
+  training_slot,
+  password,
 }) => {
   const [result] = await db.query(
     `INSERT INTO users
@@ -60,11 +67,22 @@ const createTrainer = async ({
       password,
     ]
   );
+  // Return newly created trainer ID
   return result.insertId;
 };
 
 // ── UPDATE trainer ─────────────────────────────────────────────
-const updateTrainer = (id, { name, email, phone, gender, specialization, experience, training_slot, is_active }) => {
+const updateTrainer = (
+    id,
+   { 
+    name,
+    email,
+    phone,
+    gender,
+    specialization,
+    experience,
+    training_slot,
+    is_active, }) => {
   return db.query(
     `UPDATE users
      SET name = ?, email = ?, phone = ?, gender = ?,
@@ -94,15 +112,16 @@ const deleteTrainer = async (id) => {
   return result.affectedRows;
 };
 
-// ── GET members assigned to trainer ───────────────────────────
+// ── GET or retrive members assigned to trainer ───────────────────────────
 const getTrainerMembers = (trainerId) => {
   return db.query(
-    `SELECT id, name, email, phone FROM users
+    `SELECT id, name, email, phone 
+     FROM users
      WHERE trainer_id = ? AND role = 'user'`,
     [trainerId]
   );
 };
-
+// Export model functions
 module.exports = {
   getAllTrainers,
   getTrainerById,

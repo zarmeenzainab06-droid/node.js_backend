@@ -49,7 +49,8 @@ const getAllMembers = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-//tadaaaa
+// Retrieve a single member by ID with membership and package details
+
 const getMemberById = async (req, res) => {
   try {
     const rows = await MemberModel.getMemberById(
@@ -69,7 +70,13 @@ const getMemberById = async (req, res) => {
 
 // ── POST /admin/members ────────────────────────────────────────
 const createMember = async (req, res) => {
-  const { name, email, phone, gender, training_slot, trainer_id, password } = req.body;
+  const { name,
+     email,
+     phone,
+     gender, 
+     training_slot, 
+     trainer_id, 
+     password } = req.body;
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
@@ -78,10 +85,12 @@ const createMember = async (req, res) => {
     return res.status(400).json({ success: false, message: "Password is required" });
   try {
     const existing = await MemberModel.findByEmail(email);
+    
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    const userId = await MemberModel.createMember({ name,
+    const userId = await MemberModel.createMember({
+      name,
       email,
       phone,
       gender,
@@ -105,8 +114,15 @@ const createMember = async (req, res) => {
 // ── PUT /admin/members/:id ─────────────────────────────────────
 const updateMember = async (req, res) => {
   const userId = req.params.id;
-  const { name, email, phone, gender, training_slot, trainer_id } = req.body;
-  if (!name || !email)
+  const { 
+    name, 
+    email,
+    phone, 
+    gender, 
+    training_slot, 
+    trainer_id } = req.body;
+ 
+    if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
   try {
@@ -123,12 +139,11 @@ const updateMember = async (req, res) => {
       phone,
       gender,
       training_slot,
-      trainer_id,
-    
-      
+      trainer_id, 
     });
     return res.status(200).json({ success: true, message: "Member updated successfully" });
-  } catch (err) {
+  } 
+  catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -159,7 +174,13 @@ const deleteMember = async (req, res) => {
 // Handles multipart/form-data when screenshot is uploaded
 const assignMembership = async (req, res) => {
   const userId = req.params.id;
-  const { package_id, start_date, end_date, amount, payment_method } = req.body;
+  const { 
+    package_id, 
+    start_date, 
+    end_date, 
+    amount,
+    payment_method 
+  } = req.body;
 
   if (!package_id || !start_date || !end_date || !amount)
     return res.status(400).json({ success: false, message: "Missing required fields" });

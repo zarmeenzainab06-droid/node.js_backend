@@ -31,7 +31,8 @@ const login = async (req, res) => {
 };
 
 const signup = async (req, res) => {
-  const { name, phone, gender, email, password } = req.body;
+  const { 
+    name, phone, gender, email, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ success: false, message: "Name, email and password are required" });
 
