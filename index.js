@@ -20,7 +20,7 @@ app.use("/",               require("./routes/authRoutes"));
 app.use("/admin",          require("./routes/adminRoutes"));
 app.use("/admin/members",  require("./routes/memberRoutes"));
 app.use("/admin/packages", require("./routes/packageRoutes"));
-app.use("/trainer",        require("./routes/trainerRoutes"));
+app.use("/trainer",        require("./routes/trainerTrainerRoutes"));
  
 // ── Start server ───────────────────────────────────────────────
 app.listen(port, () =>
