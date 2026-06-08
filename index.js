@@ -1,6 +1,5 @@
 // Import required packages
 const express = require("express");
-<<<<<<< HEAD
 const cors = require("cors");
 
 // Import route files
@@ -36,11 +35,7 @@ app.use("/admin/payments", paymentRoutes);
 app.listen(port, () => {
   console.log(`GymFitex server running on port ${port}`);
 });
-=======
-const cors    = require("cors");
-const app     = express();
-const port    = 3000;
- 
+
 // ── CORS — allow Flutter Web on any localhost port ─────────────
 app.use(cors({
   origin: '*',               // allow all origins (for development)
@@ -65,4 +60,3 @@ app.listen(port, () =>
   console.log(`✅ GymFitex server running on http://127.0.0.1:${port}`)
 );
  
->>>>>>> a19d6210d21200c58ceec1474ca30bb76f757545
