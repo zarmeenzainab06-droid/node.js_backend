@@ -1,6 +1,5 @@
 // Import required packages
 const express = require("express");
-const cors = require("cors");
 
 // Import route files
 const authRoutes = require("./routes/authRoutes");
@@ -11,12 +10,19 @@ const trainerRoutes = require("./routes/trainerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const adminProfileRoutes = require("./routes/adminProfileRoutes");
 
-// Create Express application
-const app = express();
-const port = 3000;
-
 // Configure middleware
 app.use(cors());
+const cors    = require("cors");
+const app     = express();
+const port    = 3000;
+ 
+// ── CORS — allow Flutter Web on any localhost port ─────────────
+app.use(cors({
+  origin: '*',               // allow all origins (for development)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+ 
 app.use(express.json());
 
 // Serve uploaded files
@@ -30,6 +36,9 @@ app.use("/admin/packages", packageRoutes);
 app.use("/admin/trainers", trainerRoutes);
 app.use("/admin/profile", adminProfileRoutes);
 app.use("/admin/payments", paymentRoutes);
+
+app.use("/trainer",        require("./routes/trainerTrainerRoutes"));
+
 
 // Start server
 app.listen(port, () => {
