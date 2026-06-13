@@ -30,5 +30,23 @@ const verifyAdmin = (req, res, next) => {
     next();
   });
 };
+// ── Trainer only ──────────────────────────────────────────────
+// ✅ NEW — required by trainerRoutes.js
+const verifyTrainer = (req, res, next) => {
+  const token = req.headers["authorization"]?.split(" ")[1];
+  if (!token)
+    return res.status(401).json({ success: false, message: "No token provided" });
+ 
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err)
+      return res.status(403).json({ success: false, message: "Invalid token" });
+    if (decoded.role !== "trainer")
+      return res.status(403).json({ success: false, message: "Access denied. Trainers only." });
+ 
+    req.user = decoded; // ✅ req.user.id used in all trainer routes
+    next();
+  });
+};
+ 
+module.exports = { verifyToken, verifyAdmin, verifyTrainer };
 
-module.exports = { verifyToken, verifyAdmin };

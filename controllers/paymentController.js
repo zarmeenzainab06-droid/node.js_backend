@@ -22,32 +22,23 @@ const getAllPayments = async (req, res) => {
     // Fetch payments from database using filters
     const [rows] = await PaymentModel.getAll(filters);
 
-    // Debug log to verify returned payment data
-    if (rows.length > 0) {
-      console.log(
-        "First payment row:",
-        JSON.stringify(rows[0], null, 2)
-      );
-    }
-
+    
     // Rename status field for Flutter compatibility
     const mapped = rows.map((r) => ({
       ...r,
-      payment_status: r.status,
+      payment_status: r.status
+      ? r.status.charAt(0).toUpperCase() + r.status.slice(1).toLowerCase()
+        : 'Unpaid',
     }));
 
     // Return payment records
-    return res.status(200).json({
-      success: true,
-      data: mapped,
+    return res.status(200).json({ success: true, data: mapped,
     });
 
   } catch (err) {
     console.error(err);
 
-    return res.status(500).json({
-      success: false,
-      message: err.message,
+    return res.status(500).json({ success: false, message: err.message,
     });
   }
 };
@@ -87,7 +78,7 @@ const getPaymentById = async (req, res) => {
 
 // Create a new payment record post/admin/payments
 const createPayment = async (req, res) => {
-
+try {
   // Extract payment data from request body
   const {
     user_id,
@@ -98,6 +89,8 @@ const createPayment = async (req, res) => {
     method,
     status,
     payment_date,
+    transaction_id,
+
   } = req.body;
 
   // Debug logs for incoming request data
@@ -105,14 +98,12 @@ const createPayment = async (req, res) => {
   console.log("membership_month received:", membership_month);
 
   // Validate required fields
-  if (!user_id) {
+  if (!user_id) 
     return res.status(400).json({
       success: false,
       message: "user_id is required",
     });
-  }
-
-  try {
+  
 
     // Store uploaded screenshot filename if provided
     const screenshot = req.file
@@ -126,10 +117,12 @@ const createPayment = async (req, res) => {
       membership_month,
       package_amount,
       amount_received,
-      method,
-      status,
+      method:         method || 'cash',
+      status:         status || 'pending',
       screenshot,
       payment_date,
+       transaction_id: transaction_id || null,
+
     });
 
     // Return success response
@@ -140,7 +133,7 @@ const createPayment = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('create payment error:', err);
 
     return res.status(500).json({
       success: false,
@@ -151,36 +144,43 @@ const createPayment = async (req, res) => {
 
 
 // Update an existing payment record PUT /admin/payments/:id
+// Update an existing payment record PUT /admin/payments/:id
 const updatePayment = async (req, res) => {
-
-  // Extract updated payment data
-  const {
-    user_id,
-    package_id,
-    membership_month,
-    package_amount,
-    amount_received,
-    method,
-    status,
-    payment_date,
-  } = req.body;
-
   try {
+    const {
+      user_id,
+      package_id,
+      membership_month,
+      package_amount,
+      amount_received,
+      method,
+      status,
+      payment_date,
+      transaction_id,
+    } = req.body;
 
-    // Keep existing screenshot if no new file is uploaded
-    let screenshot = req.body.screenshot || null;
+    console.log("UPDATE payment body:", req.body);
+    console.log("membership_month received:", membership_month);
 
-    // Process newly uploaded screenshot
+    // Get existing payment first
+    const [old] = await PaymentModel.getById(req.params.id);
+
+    if (!old.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
+    // Keep old screenshot by default
+    let screenshot = old[0].screenshot;
+
+    // If user uploaded a new screenshot
     if (req.file) {
-
       screenshot = req.file.filename;
 
-      // Retrieve existing payment record
-      const [old] = await PaymentModel.getById(req.params.id);
-
-      // Delete old screenshot if it exists
-      if (old.length && old[0].screenshot) {
-
+      // Delete old screenshot file
+      if (old[0].screenshot) {
         const oldPath = path.join(
           __dirname,
           "../uploads",
@@ -193,27 +193,25 @@ const updatePayment = async (req, res) => {
       }
     }
 
-    // Update payment record in database
     await PaymentModel.update(req.params.id, {
       user_id,
       package_id,
       membership_month,
       package_amount,
       amount_received,
-      method,
-      status,
+      method: method || "cash",
+      status: status || "pending",
       screenshot,
       payment_date,
+      transaction_id: transaction_id || null,
     });
 
-    // Return success response
     return res.status(200).json({
       success: true,
       message: "Payment updated",
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("update payment error:", err);
 
     return res.status(500).json({
       success: false,
@@ -222,44 +220,19 @@ const updatePayment = async (req, res) => {
   }
 };
 
-
 // Delete a payment record  DELETE  DELETE /admin/payments/:id 
 const deletePayment = async (req, res) => {
   try {
-
-    // Retrieve payment details before deletion
     const [rows] = await PaymentModel.getById(req.params.id);
-
-    // Delete screenshot file if it exists
     if (rows.length && rows[0].screenshot) {
-
-      const filePath = path.join(
-        __dirname,
-        "../uploads",
-        rows[0].screenshot
-      );
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      const filePath = path.join(__dirname, '../uploads', rows[0].screenshot);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
-
-    // Delete payment record from database
     await PaymentModel.delete(req.params.id);
-
-    // Return success response
-    return res.status(200).json({
-      success: true,
-      message: "Payment deleted",
-    });
-
+    return res.status(200).json({ success: true, message: 'Payment deleted' });
   } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error('delete payment error:', err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -278,7 +251,7 @@ const getPaymentStats = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('getStats error:', err);
 
     return res.status(500).json({
       success: false,

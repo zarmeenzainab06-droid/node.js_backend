@@ -1,6 +1,7 @@
 // Import required packages
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 // Import route files
 const authRoutes = require("./routes/authRoutes");
@@ -10,6 +11,8 @@ const packageRoutes = require("./routes/packageRoutes");
 const trainerRoutes = require("./routes/trainerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const adminProfileRoutes = require("./routes/adminProfileRoutes");
+const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
+
 
 // Create Express application
 const app = express();
@@ -20,7 +23,11 @@ app.use(cors());
 app.use(express.json());
 
 // Serve uploaded files
-app.use("/uploads", express.static("uploads"));
+//app.use("/uploads", express.static("uploads"));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 // Register application routes
 app.use("/", authRoutes);
@@ -30,7 +37,9 @@ app.use("/admin/packages", packageRoutes);
 app.use("/admin/trainers", trainerRoutes);
 app.use("/admin/profile", adminProfileRoutes);
 app.use("/admin/payments", paymentRoutes);
-
+app.use("/trainer", trainerPanelRoutes);
+// nimra
+app.use("/api/members", require("./routes/members"));
 // Start server
 app.listen(port, () => {
   console.log(`GymFitex server running on port ${port}`);

@@ -31,8 +31,6 @@ const countPending = async () => {
 
 // Retrieve all payment records with optional filters
 const getAll = (filters = {}) => {
-
-  // Base query with user and package information
   let query = `
     SELECT 
       p.id,
@@ -46,41 +44,35 @@ const getAll = (filters = {}) => {
       p.method,
       p.status,
       p.screenshot,
-      p.payment_date,
-      p.created_at
-    FROM payments p
+DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,
+      p.transaction_id,
+DATE_FORMAT(p.created_at, '%Y-%m-%d %H:%i:%s') AS created_at   FROM payments p
     LEFT JOIN users u ON p.user_id = u.id
     LEFT JOIN packages pkg ON p.package_id = pkg.id
     WHERE 1=1
   `;
 
-  // Store query parameters
   const params = [];
 
-  // Apply user filter if provided
   if (filters.user_id) {
     query += " AND p.user_id = ?";
     params.push(filters.user_id);
   }
 
-  // Apply status filter if provided
   if (filters.status) {
     query += " AND p.status = ?";
     params.push(filters.status);
   }
 
-  // Apply membership month filter if provided
   if (filters.membership_month) {
     query += " AND p.membership_month = ?";
     params.push(filters.membership_month);
   }
 
-  // Sort newest records first
   query += " ORDER BY p.created_at DESC";
 
-  // Execute query
   return db.query(query, params);
-};
+};;
 
 
 // Retrieve a single payment record by ID
@@ -89,9 +81,20 @@ const getById = (id) => {
   return db.query(
     `
     SELECT 
-      p.*,
-      u.name AS member_name,
-      pkg.name AS package_name
+      p.id,
+  p.user_id,
+  p.package_id,
+  p.membership_month,
+  p.package_amount,
+  p.amount_received,
+  p.method,
+  p.status,
+  p.screenshot,
+  DATE_FORMAT(p.payment_date, '%Y-%m-%d') AS payment_date,   
+  p.transaction_id,
+  DATE_FORMAT(p.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+  u.name AS member_name,
+  pkg.name AS package_name
     FROM payments p
     LEFT JOIN users u ON p.user_id = u.id
     LEFT JOIN packages pkg ON p.package_id = pkg.id
@@ -104,7 +107,6 @@ const getById = (id) => {
 
 // Create a new payment record
 const create = (data) => {
-
   const query = `
     INSERT INTO payments
       (
@@ -116,9 +118,10 @@ const create = (data) => {
         method,
         status,
         screenshot,
-        payment_date
+        payment_date,
+        transaction_id
       )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   return db.query(query, [
@@ -131,13 +134,11 @@ const create = (data) => {
     data.status || "pending",
     data.screenshot || null,
     data.payment_date || null,
+    data.transaction_id || null,
   ]);
 };
-
-
 // Update an existing payment record
 const update = (id, data) => {
-
   const query = `
     UPDATE payments SET
       user_id = ?,
@@ -148,7 +149,8 @@ const update = (id, data) => {
       method = ?,
       status = ?,
       screenshot = ?,
-      payment_date = ?
+      payment_date = ?,
+      transaction_id = ?
     WHERE id = ?
   `;
 
@@ -162,11 +164,10 @@ const update = (id, data) => {
     data.status || "pending",
     data.screenshot || null,
     data.payment_date || null,
+    data.transaction_id || null,
     id,
   ]);
 };
-
-
 // Delete a payment record by ID
 const deletePayment = (id) => {
 
