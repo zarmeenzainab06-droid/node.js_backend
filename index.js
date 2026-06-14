@@ -12,6 +12,8 @@ const trainerRoutes = require("./routes/trainerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const adminProfileRoutes = require("./routes/adminProfileRoutes");
 const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
+const slotRoutes = require("./routes/slotRoutes");
+
 
 
 // Create Express application
@@ -38,6 +40,8 @@ app.use("/admin/trainers", trainerRoutes);
 app.use("/admin/profile", adminProfileRoutes);
 app.use("/admin/payments", paymentRoutes);
 app.use("/trainer", trainerPanelRoutes);
+app.use("/admin/slots", slotRoutes);
+
 // nimra
 app.use("/api/members", require("./routes/members"));
 // Start server
