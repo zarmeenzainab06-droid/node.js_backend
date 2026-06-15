@@ -121,6 +121,8 @@ const updateMember = async (req, res) => {
     gender, 
     training_slot, 
     trainer_id } = req.body;
+
+    
  
     if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
@@ -146,6 +148,48 @@ const updateMember = async (req, res) => {
   catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// for updatemembership only no duplicate
+const updateMembership = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const {
+      packageId,
+      startDate,
+      endDate,
+      amount,
+      paymentMethod,
+    } = req.body;
+
+    // 🔴 IMPORTANT: DO NOT create new membership
+    // ONLY update existing active membership
+
+    await MemberModel.updateActiveMembership(userId, {
+      packageId,
+      startDate,
+      endDate,
+    });
+
+    // 🔴 UPDATE payment ONLY if needed (not always create new)
+    await MemberModel.updateLatestPayment(userId, {
+      amount,
+      paymentMethod,
+      screenshot: req.file?.path,
+    });
+
+    return res.json({
+      success: true,
+      message: "Membership updated successfully",
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
@@ -179,7 +223,9 @@ const assignMembership = async (req, res) => {
     start_date, 
     end_date, 
     amount,
-    payment_method 
+    payment_method, 
+    existing_screenshot
+
   } = req.body;
 
   if (!package_id || !start_date || !end_date || !amount)
@@ -187,8 +233,11 @@ const assignMembership = async (req, res) => {
 
   
   // Screenshot path — null if cash payment
-  const screenshotPath = req.file ? req.file.path : null;
-  //  (existing_screenshot || null); for checking
+let screenshotPath = existing_screenshot || null;
+
+if (req.file) {
+  screenshotPath = req.file.path;
+}  // for checking
   console.log(screenshotPath)
 
   try {
@@ -222,4 +271,5 @@ module.exports = {
   deleteMember,
   assignMembership,
   uploadScreenshot,
+  updateMembership
 };

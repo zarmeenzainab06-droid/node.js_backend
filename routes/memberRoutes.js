@@ -10,7 +10,9 @@ const {
   deleteMember,
   assignMembership,
   uploadScreenshot,
+  updateMembership,// for no duplication
   getMemberById,
+  
 } = require("../controllers/memberController");
 
 
@@ -54,6 +56,23 @@ router.post(
     });
   },
   assignMembership
+);
+// for the UPDATE MEMBERSHIP only no duplicate
+router.put(
+  "/:id/membership",
+  verifyAdmin,
+  (req, res, next) => {
+    uploadScreenshot(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      next();
+    });
+  },
+  updateMembership
 );
 
 

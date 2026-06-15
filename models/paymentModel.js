@@ -177,6 +177,14 @@ const deletePayment = (id) => {
   );
 };
 
+// FOR THE STATUS UPDATE SEPERTELY
+const updateStatus = (id, status) => {
+  return db.query(
+    'UPDATE payments SET status = ? WHERE id = ?',
+    [status, id]
+  );
+};
+
 
 // Retrieve payment statistics
 const getStats = () => {
@@ -215,5 +223,6 @@ module.exports = {
   create,
   update,
   delete: deletePayment,
-  getStats,
+  updateStatus,// for update stats separtely
+
 };

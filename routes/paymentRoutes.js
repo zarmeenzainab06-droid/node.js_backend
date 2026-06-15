@@ -61,6 +61,11 @@ const upload = multer({
 // Payment statistics route
 router.get("/stats", PaymentController.getPaymentStats);
 
+
+// FOR UPDATE STATUS seperately
+router.patch('/:id/status', PaymentController.updatePaymentStatus);
+ 
+
 // Retrieve all payments
 router.get("/", PaymentController.getAllPayments);
 
@@ -83,6 +88,8 @@ router.put(
 
 // Delete payment by ID
 router.delete("/:id", PaymentController.deletePayment);
+
+
 
 
 // Export router for use in application

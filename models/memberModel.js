@@ -192,6 +192,36 @@ const createMembership = async (
   );
 };
 
+// onlu update membership no duplication
+const updateActiveMembership = async (userId, data) => {
+  await db.query(
+    `UPDATE memberships
+     SET package_id = ?, start_date = ?, end_date = ?
+     WHERE user_id = ? AND status = 'active'`,
+    [data.packageId, data.startDate, data.endDate, userId]
+  );
+};
+
+
+// same for payment no duplication
+const updateLatestPayment = async (userId, data) => {
+  await db.query(
+    `UPDATE payments
+     SET amount = ?, method = ?, screenshot = ?
+     WHERE id = (
+        SELECT id FROM (
+          SELECT id FROM payments
+          WHERE user_id = ?
+          ORDER BY id DESC
+          LIMIT 1
+        ) AS temp
+     )`,
+    [data.amount, data.paymentMethod, data.screenshot, userId]
+  );
+};
+
+
+
 // ── Create Payment ──────────────────────────────
 const createPayment = async (
   userId,
@@ -220,4 +250,6 @@ module.exports = {
   expireMemberships,
   createMembership,
   createPayment,
+  updateActiveMembership,
+  updateLatestPayment
 };

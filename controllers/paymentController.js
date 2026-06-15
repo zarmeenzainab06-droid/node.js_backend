@@ -220,6 +220,26 @@ const updatePayment = async (req, res) => {
   }
 };
 
+// UPDATE STATUS SEPERATELEY
+
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const allowed = ['paid', 'partial', 'unpaid', 'pending'];
+    if (!status || !allowed.includes(status.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: `Status must be one of: ${allowed.join(', ')}`,
+      });
+    }
+    await PaymentModel.updateStatus(req.params.id, status.toLowerCase());
+    return res.status(200).json({ success: true, message: 'Status updated' });
+  } catch (err) {
+    console.error('updatePaymentStatus error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Delete a payment record  DELETE  DELETE /admin/payments/:id 
 const deletePayment = async (req, res) => {
   try {
@@ -269,4 +289,5 @@ module.exports = {
   updatePayment,
   deletePayment,
   getPaymentStats,
+  updatePaymentStatus,// for update status separetly
 };
