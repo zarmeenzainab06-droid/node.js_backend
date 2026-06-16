@@ -39,7 +39,7 @@ const getSlotMembers = async (req, res) => {
 
 // ── POST /admin/slots ─────────────────────────────────────────
 const createSlot = async (req, res) => {
-  const { name, start_time, end_time, capacity, status } = req.body;
+  const { name, start_time, end_time, capacity, status, schedule_days } = req.body;
   if (!name || !start_time || !end_time)
     return res.status(400).json({ success: false, message: "Name, start and end time are required" });
   try {
@@ -47,7 +47,7 @@ const createSlot = async (req, res) => {
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Slot name already exists" });
 
-    const id = await SlotModel.createSlot({ name, start_time, end_time, capacity, status });
+    const id = await SlotModel.createSlot({ name, start_time, end_time, capacity, status,schedule_days });
     return res.status(201).json({ success: true, message: "Slot created", slot_id: id });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -56,7 +56,7 @@ const createSlot = async (req, res) => {
 
 // ── PUT /admin/slots/:id ──────────────────────────────────────
 const updateSlot = async (req, res) => {
-  const { name, start_time, end_time, capacity, status } = req.body;
+  const { name, start_time, end_time, capacity, status, schedule_days } = req.body;
   if (!name || !start_time || !end_time)
     return res.status(400).json({ success: false, message: "Name, start and end time are required" });
   try {
@@ -65,7 +65,7 @@ const updateSlot = async (req, res) => {
       return res.status(400).json({ success: false, message: "Slot name already in use" });
 
     const affected = await SlotModel.updateSlot(req.params.id,
-      { name, start_time, end_time, capacity, status });
+      { name, start_time, end_time, capacity, status,schedule_days });
     if (affected === 0)
       return res.status(404).json({ success: false, message: "Slot not found" });
 

@@ -55,21 +55,24 @@ const getSlotMembers = async (slotName) => {
 };
 
 // ── CREATE slot ───────────────────────────────────────────────
-const createSlot = async ({ name, start_time, end_time, capacity, status }) => {
+const createSlot = async ({ name, start_time, end_time, capacity, status,schedule_days }) => {
   const [result] = await db.query(
-    `INSERT INTO slots (name, start_time, end_time, capacity, status)
-     VALUES (?, ?, ?, ?, ?)`,
-    [name, start_time, end_time, capacity || 30, status || "active"]
+    `INSERT INTO slots (name, start_time, end_time, capacity, status, schedule_days)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [name, start_time, end_time, capacity || 30, status || "active" ,
+           schedule_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun']
+
   );
   return result.insertId;
 };
 
-// ── UPDATE slot ───────────────────────────────────────────────
-const updateSlot = async (id, { name, start_time, end_time, capacity, status }) => {
+// In updateSlot
+const updateSlot = async (id, { name, start_time, end_time, capacity, status, schedule_days }) => {
   const [result] = await db.query(
-    `UPDATE slots SET name = ?, start_time = ?, end_time = ?,
-      capacity = ?, status = ? WHERE id = ?`,
-    [name, start_time, end_time, capacity, status, id]
+    `UPDATE slots SET name=?, start_time=?, end_time=?,
+      capacity=?, status=?, schedule_days=? WHERE id=?`,
+    [name, start_time, end_time, capacity, status,
+     schedule_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', id]
   );
   return result.affectedRows;
 };
