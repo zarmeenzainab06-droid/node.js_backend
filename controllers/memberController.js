@@ -83,32 +83,38 @@ const createMember = async (req, res) => {
   // for password
   if (!password)
     return res.status(400).json({ success: false, message: "Password is required" });
-  try {
-    const existing = await MemberModel.findByEmail(email);
-    
-    if (existing.length > 0)
-      return res.status(400).json({ success: false, message: "Email already registered" });
+ try {
+  const existing = await MemberModel.findByEmail(email);
 
-    const userId = await MemberModel.createMember({
-      name,
-      email,
-      phone,
-      gender,
-      training_slot,
-      trainer_id,
-      password,
+  if (existing.length > 0)
+    return res.status(400).json({
+      success: false,
+      message: "Email already registered"
+    });
 
-    });
-      
-    return res.status(201).json({
-      success: true,
-      message: "Member created successfully",
-      user_id: userId
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
+  const userId = await MemberModel.createMember({
+    name,
+    email,
+    phone,
+    gender,
+    training_slot,
+    trainer_id,
+    password,
+  });
+
+  return res.status(201).json({
+    success: true,
+    message: "Member created successfully",
+    user_id: userId,
+  });
+
+} catch (err) {
+  console.error(err);
+  return res.status(500).json({
+    success: false,
+    message: err.message,
+  });
+}
 };
 
 // ── PUT /admin/members/:id ─────────────────────────────────────
@@ -151,7 +157,7 @@ const updateMember = async (req, res) => {
   }
 };
 
-// for updatemembership only no duplicate
+
 const updateMembership = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -162,10 +168,14 @@ const updateMembership = async (req, res) => {
       endDate,
       amount,
       paymentMethod,
+      existing_screenshot,
     } = req.body;
 
-    // 🔴 IMPORTANT: DO NOT create new membership
-    // ONLY update existing active membership
+    let screenshotPath = existing_screenshot || null;
+
+    if (req.file) {
+      screenshotPath = req.file.path;
+    }
 
     await MemberModel.updateActiveMembership(userId, {
       packageId,
@@ -173,25 +183,61 @@ const updateMembership = async (req, res) => {
       endDate,
     });
 
-    // 🔴 UPDATE payment ONLY if needed (not always create new)
     await MemberModel.updateLatestPayment(userId, {
       amount,
       paymentMethod,
-      screenshot: req.file?.path,
+      screenshot: screenshotPath,
     });
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: "Membership updated successfully",
     });
-
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 };
+
+
+// for updatemembership only no duplicate
+// const updateMembership = async (req, res) => {
+//   try {
+//     const userId = req.params.id;
+
+//     const {
+//       packageId,
+//       startDate,
+//       endDate,
+//       amount,
+//       paymentMethod,
+//     } = req.body;
+
+    
+
+//     // 🔴 UPDATE payment ONLY if needed (not always create new)
+//     await MemberModel.updateLatestPayment(userId, {
+//       amount,
+//       paymentMethod,
+//       screenshot: req.file?.path,
+//     });
+
+//     return res.json({
+//       success: true,
+//       message: "Membership updated successfully",
+//     });
+
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
 
 // ── DELETE /admin/members/:id ──────────────────────────────────
 const deleteMember = async (req, res) => {

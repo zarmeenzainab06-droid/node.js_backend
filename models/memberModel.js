@@ -193,33 +193,123 @@ const createMembership = async (
 };
 
 // onlu update membership no duplication
+// const updateActiveMembership = async (userId, data) => {
+//   await db.query(
+//     `UPDATE memberships
+//      SET package_id = ?, start_date = ?, end_date = ?
+//      WHERE user_id = ? AND status = 'active'`,
+//     [data.packageId, data.startDate, data.endDate, userId]
+//   );
+// };
+
 const updateActiveMembership = async (userId, data) => {
+  const [rows] = await db.query(
+    `
+    SELECT id
+    FROM memberships
+    WHERE user_id = ?
+      AND status = 'active'
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    await db.query(
+      `
+      INSERT INTO memberships
+      (user_id, package_id, start_date, end_date, status)
+      VALUES (?, ?, ?, ?, 'active')
+      `,
+      [
+        userId,
+        data.packageId,
+        data.startDate,
+        data.endDate,
+      ]
+    );
+    return;
+  }
+
   await db.query(
-    `UPDATE memberships
-     SET package_id = ?, start_date = ?, end_date = ?
-     WHERE user_id = ? AND status = 'active'`,
-    [data.packageId, data.startDate, data.endDate, userId]
+    `
+    UPDATE memberships
+    SET package_id = ?,
+        start_date = ?,
+        end_date = ?
+    WHERE id = ?
+    `,
+    [
+      data.packageId,
+      data.startDate,
+      data.endDate,
+      rows[0].id,
+    ]
   );
 };
-
 
 // same for payment no duplication
+// const updateLatestPayment = async (userId, data) => {
+//   await db.query(
+//     `UPDATE payments
+//      SET amount = ?, method = ?, screenshot = ?
+//      WHERE id = (
+//         SELECT id FROM (
+//           SELECT id FROM payments
+//           WHERE user_id = ?
+//           ORDER BY id DESC
+//           LIMIT 1
+//         ) AS temp
+//      )`,
+//     [data.amount, data.paymentMethod, data.screenshot, userId]
+//   );
+// };
+
 const updateLatestPayment = async (userId, data) => {
+  const [rows] = await db.query(
+    `
+    SELECT id
+    FROM payments
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    await db.query(
+      `
+      INSERT INTO payments
+      (user_id, amount, method, status, screenshot)
+      VALUES (?, ?, ?, 'paid', ?)
+      `,
+      [
+        userId,
+        data.amount,
+        data.paymentMethod,
+        data.screenshot,
+      ]
+    );
+    return;
+  }
+
   await db.query(
-    `UPDATE payments
-     SET amount = ?, method = ?, screenshot = ?
-     WHERE id = (
-        SELECT id FROM (
-          SELECT id FROM payments
-          WHERE user_id = ?
-          ORDER BY id DESC
-          LIMIT 1
-        ) AS temp
-     )`,
-    [data.amount, data.paymentMethod, data.screenshot, userId]
+    `
+    UPDATE payments
+    SET amount = ?,
+        method = ?,
+        screenshot = ?
+    WHERE id = ?
+    `,
+    [
+      data.amount,
+      data.paymentMethod,
+      data.screenshot,
+      rows[0].id,
+    ]
   );
 };
-
 
 
 // ── Create Payment ──────────────────────────────
