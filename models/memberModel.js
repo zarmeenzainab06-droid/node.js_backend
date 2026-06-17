@@ -329,6 +329,16 @@ const createPayment = async (
   );
 };
 
+// Freeze or unfreeze membership status
+const updateMembershipStatus = async (userId, status) => {
+  await db.query(
+    `UPDATE memberships 
+     SET status = ? 
+     WHERE user_id = ? AND status != 'expired'`,
+    [status, userId]
+  );
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -341,5 +351,7 @@ module.exports = {
   createMembership,
   createPayment,
   updateActiveMembership,
-  updateLatestPayment
+  updateLatestPayment,
+    updateMembershipStatus
+
 };

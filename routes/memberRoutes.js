@@ -12,6 +12,8 @@ const {
   uploadScreenshot,
   updateMembership,// for no duplication
   getMemberById,
+  freezeMembership,
+
   
 } = require("../controllers/memberController");
 
@@ -34,6 +36,9 @@ router.put("/:id", verifyAdmin, updateMember);
 
 // Delete member by ID
 router.delete("/:id", verifyAdmin, deleteMember);
+
+//  freez status in member module
+router.patch("/:id/freeze", verifyAdmin, freezeMembership);
 
 
 // Assign membership to a member

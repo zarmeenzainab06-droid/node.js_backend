@@ -149,7 +149,7 @@ router.put('/update-profile', verifyToken, async (req, res) => {
 router.put('/change-password', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
-    const { current_password, new_password } = req.body;
+    const { current_password, new_Password } = req.body;
 
     // Current password check
     const [rows] = await db.query(

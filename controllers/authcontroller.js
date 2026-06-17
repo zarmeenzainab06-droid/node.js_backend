@@ -6,7 +6,11 @@ const JWT_SECRET = "serve_ease";
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
+    console.log("EMAIL:", email);
+
     const user = await UserModel.findByEmail(email);
+    console.log("USER:", user);
+
     if (!user)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 

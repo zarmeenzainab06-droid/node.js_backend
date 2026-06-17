@@ -309,6 +309,30 @@ if (req.file) {
   }
 };
 
+// for stattus in member module 
+// Freeze or unfreeze membership
+const freezeMembership = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { action } = req.body;
+
+    // Decide status based on action
+    const newStatus = action === "freeze" ? "frozen" : "active";
+
+    // Call model function (DB logic is separated)
+await MemberModel.updateMembershipStatus(userId, newStatus);
+    return res.status(200).json({
+      success: true,
+      message: `Membership ${newStatus} successfully`,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -317,5 +341,6 @@ module.exports = {
   deleteMember,
   assignMembership,
   uploadScreenshot,
-  updateMembership
+  updateMembership,
+  freezeMembership
 };

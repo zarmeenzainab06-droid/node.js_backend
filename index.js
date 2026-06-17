@@ -2,6 +2,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const cron = require('node-cron');
+const db = require("./config/db"); // ← add this
 
 // Import route files
 const authRoutes = require("./routes/authRoutes");
@@ -24,14 +26,31 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve uploaded files
-//app.use("/uploads", express.static("uploads"));
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
-);
 
-// Register application routes
+
+// ── Auto expire memberships ───// for auto expire status in member module 
+
+const autoExpireMemberships = async () => {
+  try {
+    const [result] = await db.query(`
+      UPDATE memberships 
+      SET status = 'expired' 
+      WHERE end_date < CURDATE() 
+      AND status = 'active'
+    `);
+    console.log(`Auto-expired ${result.affectedRows} memberships`);
+  } catch (err) {
+    console.error('Auto-expire error:', err.message);
+  }
+};
+// for auto expire status in memebr module
+cron.schedule('0 0 * * *', autoExpireMemberships);
+
+//app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
+// Routes 
 app.use("/", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/admin/members", memberRoutes);

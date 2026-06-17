@@ -14,7 +14,7 @@ const findByEmail = async (email) => {
  [email]);
   return rows[0] || null;
 };
-
+// register
 const createUser = async ({ name, phone, gender, email, password }) => {
   const [result] = await db.query(
     `INSERT INTO users (name, phone, gender, email, password) VALUES (?, ?, ?, ?, ?)`,
@@ -60,18 +60,18 @@ const findAllMembers = async (search, statusFilter) => {
   return rows;
 };
 
-const createMember = async ({ name, email, phone, gender, training_slot, trainer_id, password }) => {
-  const [result] = await db.query(
-    `INSERT INTO users (name, email, phone, gender, training_slot, trainer_id, password, role)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'user')`,
-    [
-      name, email, phone || null, gender || "male",
-      training_slot || "morning", trainer_id || null,
-      password || "GymSwift@123",
-    ]
-  );
-  return result.insertId;
-};
+// const createMember = async ({ name, email, phone, gender, training_slot, trainer_id, password }) => {
+//   const [result] = await db.query(
+//     `INSERT INTO users (name, email, phone, gender, training_slot, trainer_id, password, role)
+//      VALUES (?, ?, ?, ?, ?, ?, ?, 'user')`,
+//     [
+//       name, email, phone || null, gender || "male",
+//       training_slot || "morning", trainer_id || null,
+//       password || "GymSwift@123",
+//     ]
+//   );
+//   return result.insertId;
+// };
 
 const updateMember = async (userId, { name, email, phone, gender, training_slot, trainer_id }) => {
   await db.query(
@@ -117,7 +117,7 @@ module.exports = {
   findByEmail,
   createUser,
   findAllMembers,
-  createMember,
+  // createMember,
   updateMember,
   findMemberEmailConflict,
   deleteMemberById,

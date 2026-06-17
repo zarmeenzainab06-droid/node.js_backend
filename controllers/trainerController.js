@@ -1,5 +1,5 @@
 const TrainerModel = require("../models/trainerModel"); // Import trainer model for database operations
-const bcrypt = require("bcrypt"); // Import bcrypt for password hashing
+const bcrypt = require("bcrypt"); 
 
 // GET /admin/trainers
 // This function retrieves all trainers, optionally filtered by a search query
