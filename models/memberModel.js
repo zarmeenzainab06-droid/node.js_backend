@@ -128,29 +128,53 @@ const createMember = async ({
 };
 
 // ── Update Member ───────────────────────────────
+// const updateMember = async (
+//   userId,
+//   { name, email, phone, gender, training_slot, trainer_id }
+// ) => {
+//   const [result] = await db.query(
+//     `
+//     UPDATE users
+//     SET name = ?, email = ?, phone = ?, gender = ?,
+//         training_slot = ?, trainer_id = ?
+//     WHERE id = ? AND role = 'user'
+//   `,
+//     [
+//       name,
+//       email,
+//       phone || null,
+//       gender || "male",
+//       training_slot || "morning",
+//       trainer_id || null,
+//       userId,
+//     ]
+//   );
+
+//   return result.affectedRows;
+// };
+// PD edit mode
 const updateMember = async (
   userId,
-  { name, email, phone, gender, training_slot, trainer_id }
+  { name, email, phone, gender, training_slot, trainer_id, password }
 ) => {
-  const [result] = await db.query(
-    `
-    UPDATE users
-    SET name = ?, email = ?, phone = ?, gender = ?,
-        training_slot = ?, trainer_id = ?
-    WHERE id = ? AND role = 'user'
-  `,
-    [
-      name,
-      email,
-      phone || null,
-      gender || "male",
-      training_slot || "morning",
-      trainer_id || null,
-      userId,
-    ]
-  );
-
-  return result.affectedRows;
+  if (password && password.trim().length > 0) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.query(
+      `UPDATE users SET name=?, email=?, phone=?, gender=?,
+       training_slot=?, trainer_id=?, password=?
+       WHERE id=? AND role='user'`,
+      [name, email, phone||null, gender||'male',
+       training_slot||'morning', trainer_id||null, hashedPassword, userId]
+    );
+  } else {
+    await db.query(
+      `UPDATE users SET name=?, email=?, phone=?, gender=?,
+       training_slot=?, trainer_id=?
+       WHERE id=? AND role='user'`,
+      [name, email, phone||null, gender||'male',
+       training_slot||'morning', trainer_id||null, userId]
+    );
+  }
 };
 
 // ── Delete Member ───────────────────────────────

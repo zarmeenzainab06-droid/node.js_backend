@@ -126,6 +126,7 @@ const updateMember = async (req, res) => {
     phone, 
     gender, 
     training_slot, 
+    password, // ← add password
     trainer_id } = req.body;
 
     
@@ -148,6 +149,7 @@ const updateMember = async (req, res) => {
       gender,
       training_slot,
       trainer_id, 
+      password, // ← add password
     });
     return res.status(200).json({ success: true, message: "Member updated successfully" });
   } 
