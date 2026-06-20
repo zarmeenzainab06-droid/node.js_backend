@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
-const { verifyToken } = require('../middleware/auth');
-const bcrypt = require('bcrypt');
-
+const db = require('../../config/db');
+const { verifyToken } = require('../../middleware/auth');
 
 router.get('/profile', verifyToken, async (req, res) => {
   try {
@@ -149,7 +147,7 @@ router.put('/update-profile', verifyToken, async (req, res) => {
 router.put('/change-password', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
-    const { current_password, new_Password } = req.body;
+    const { current_password, new_password } = req.body;
 
     // Current password check
     const [rows] = await db.query(
@@ -167,9 +165,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
 
     // Bcrypt check
     const bcrypt = require('bcrypt');
-    if (!isMatch && user.password.startsWith('$2a$') ||  // for hashing 
-      user.password.startsWith('$2b$')
-)  {
+    if (!isMatch && user.password.startsWith('$2a$')) {
       isMatch = await bcrypt.compare(current_password, user.password);
     }
 
@@ -179,12 +175,6 @@ router.put('/change-password', verifyToken, async (req, res) => {
         message: 'Current password galat hai'
       });
     }
-
-    // for hashing
-    const hashedPassword = await bcrypt.hash(
-  new_password,
-  10
-);
 
     // New password save
     await db.query(

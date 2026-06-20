@@ -62,7 +62,10 @@ app.use("/trainer", trainerPanelRoutes);
 app.use("/admin/slots", slotRoutes);
 
 // nimra
-app.use("/api/members", require("./routes/members"));
+app.use("/api/members", require("./routes/member/members"));
+app.use("/api/payments", require("./routes/member/payment_routes"));
+app.use("/api/packages", require("./routes/member/memberpackageroutes"));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Start server
 app.listen(port, () => {
   console.log(`GymFitex server running on port ${port}`);
