@@ -57,7 +57,7 @@ VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)`,
 
     res.json({
       success: true,
-      message: 'Payment submit ho gayi! Admin approval ka wait karo.',
+      message: 'Payment submitted successfully! Please wait for admin approval.',
       payment_id: result.insertId,
       screenshot: screenshotPath
     });
@@ -144,7 +144,7 @@ router.put('/approve/:id', verifyToken, async (req, res) => {
       );
     }
 
-    res.json({ success: true, message: 'Payment approve ho gayi!' });
+    res.json({ success: true, message: 'Payment approved successfully!' });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -161,7 +161,7 @@ router.put('/reject/:id', verifyToken, async (req, res) => {
       [paymentId]
     );
 
-    res.json({ success: true, message: 'Payment reject ho gayi!' });
+    res.json({ success: true, message: 'Payment rejected successfully!' });
 
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -135,7 +135,7 @@ router.put('/update-profile', verifyToken, async (req, res) => {
       [name, phone, userId]
     );
 
-    res.json({ success: true, message: 'Profile update ho gaya' });
+    res.json({ success: true, message: 'Profile updated successfully' });
 
   } catch (error) {
     console.error('Update Error:', error.message);
@@ -172,7 +172,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: 'Current password galat hai'
+        message: 'Current password is incorrect'
       });
     }
 
@@ -182,7 +182,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
       [new_password, userId]
     );
 
-    res.json({ success: true, message: 'Password change ho gaya' });
+    res.json({ success: true, message: 'Password changed successfully' });
 
   } catch (error) {
     console.error('Password Error:', error.message);

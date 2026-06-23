@@ -15,6 +15,9 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const adminProfileRoutes = require("./routes/adminProfileRoutes");
 const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
 const slotRoutes = require("./routes/slotRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+
+
 
 
 
@@ -60,6 +63,10 @@ app.use("/admin/profile", adminProfileRoutes);
 app.use("/admin/payments", paymentRoutes);
 app.use("/trainer", trainerPanelRoutes);
 app.use("/admin/slots", slotRoutes);
+app.use("/admin/reports", reportRoutes);
+
+
+
 
 // nimra
 app.use("/api/members", require("./routes/member/members"));
