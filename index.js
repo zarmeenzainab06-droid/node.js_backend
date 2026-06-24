@@ -25,7 +25,7 @@ const memberPortalRoutes = require("./routes/memberPortalRoutes");
 
 // Create Express application
 const app = express();
-const port = 3000;
+const port = 3002;
 
 // Configure middleware
 app.use(cors());
