@@ -6,7 +6,7 @@ const {
   getDashboardStats,
   getRecentActivity,
   getTrainers,
-} = require("../controllers/adminController");
+} = require("../controllers/admincontroller");
 
 
 // Retrieve dashboard statistics
