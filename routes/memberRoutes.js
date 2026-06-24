@@ -80,6 +80,4 @@ router.put(
   updateMembership
 );
 
-
-// Export router
 module.exports = router;

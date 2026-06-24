@@ -16,6 +16,8 @@ const adminProfileRoutes = require("./routes/adminProfileRoutes");
 const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
 const slotRoutes = require("./routes/slotRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const memberPortalRoutes = require("./routes/memberPortalRoutes");
+
 
 
 
@@ -64,6 +66,7 @@ app.use("/admin/payments", paymentRoutes);
 app.use("/trainer", trainerPanelRoutes);
 app.use("/admin/slots", slotRoutes);
 app.use("/admin/reports", reportRoutes);
+app.use("/api/member", memberPortalRoutes);
 
 
 
