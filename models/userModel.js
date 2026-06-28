@@ -96,13 +96,13 @@ const deleteMemberById = async (userId) => {
   await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
 };
 
-// ── Trainers ──────────────────────────────────────────────────
-const findAllTrainers = async () => {
-  const [rows] = await db.query(
-    `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
-  );
-  return rows;
-};
+// // ── Trainers ──────────────────────────────────────────────────
+// const findAllTrainers = async () => {
+//   const [rows] = await db.query(
+//     `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
+//   );
+//   return rows;
+// };
 
 // ── Stats ─────────────────────────────────────────────────────
 const countTotalMembers = async () => {
@@ -121,6 +121,6 @@ module.exports = {
   updateMember,
   findMemberEmailConflict,
   deleteMemberById,
-  findAllTrainers,
+  // findAllTrainers,
   countTotalMembers,
 };
