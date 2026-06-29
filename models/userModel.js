@@ -111,6 +111,13 @@ const countTotalMembers = async () => {
   );
   return totalMembers;
 };
+// total trainer
+const countTotalTrainers = async () => {
+  const [[{ totalTrainers }]] = await db.query(
+    `SELECT COUNT(*) AS totalTrainers FROM users WHERE role = 'trainer'`
+  );
+  return totalTrainers;
+};
 
 module.exports = {
   findByEmailAndPassword,
@@ -123,4 +130,5 @@ module.exports = {
   deleteMemberById,
   findAllTrainers,
   countTotalMembers,
+  countTotalTrainers,
 };

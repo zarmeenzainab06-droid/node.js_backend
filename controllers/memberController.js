@@ -287,6 +287,15 @@ if (req.file) {
   screenshotPath = req.file.path;
 }  // for checking
   console.log(screenshotPath)
+  // ← NEW: calculate membership_month from start_date so it shows correctly
+  // in the Payments module (e.g. "July 2026")
+  const monthNames = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December'
+  ];
+  const startDateObj = new Date(start_date);
+  const membership_month = `${monthNames[startDateObj.getMonth()]} ${startDateObj.getFullYear()}`;
+ 
 
   try {
     // Expire existing memberships
@@ -299,9 +308,11 @@ if (req.file) {
       userId, package_id, start_date, end_date
     );
 
-    // Record payment with screenshot
-    await MemberModel.createPayment (
-      userId, amount, payment_method , screenshotPath
+// ← CHANGED: now passes package_id and membership_month too,
+    // so the first payment row has full data instead of NULL/0
+    await MemberModel.createPayment(
+      userId, amount, payment_method, screenshotPath,
+      package_id, membership_month
     );
 
     return res.status(201).json({ success: true, message: "Membership assigned successfully" });

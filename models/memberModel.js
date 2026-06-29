@@ -341,18 +341,28 @@ const createPayment = async (
   userId,
   amount,
   payment_method,
-  screenshotPath
+  screenshotPath,       
+  package_id,   // add this so amount rcvd show     
+  membership_month // add this so amount rcvd show
 ) => {
   await db.query(
     `
     INSERT INTO payments
-    (user_id, amount, method, status, screenshot)
-    VALUES (?, ?, ?, 'paid', ?)
+    (user_id, amount, amount_received, package_id, package_amount, membership_month, method, status, screenshot)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?)
   `,
-    [userId, amount, payment_method || "cash", screenshotPath]
+    [
+      userId,
+      amount,
+      amount,              // amount_received = amount paid
+      package_id || null,
+      amount,               // package_amount stored same as paid amount
+      membership_month || null,
+      payment_method || "cash",
+      screenshotPath,
+    ]
   );
 };
-
 // Freeze or unfreeze membership status
 const updateMembershipStatus = async (userId, status) => {
   await db.query(

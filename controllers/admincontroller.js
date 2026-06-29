@@ -6,13 +6,14 @@ const ActivityModel = require("../models/activityModel");
 const getDashboardStats = async (req, res) => {
   try {
     const totalMembers = await UserModel.countTotalMembers();
+     const totalTrainers = await UserModel.countTotalTrainers();   // ← add this
     const active = await MembershipModel.countActive();
     const expired = await MembershipModel.countExpired();
     const pendingPayments = await PaymentModel.countPending();
 
     return res.status(200).json({
       success: true,
-      stats: { totalMembers, active, expired, pendingPayments },
+      stats: { totalMembers, totalTrainers, active, expired, pendingPayments },
     });
   } catch (err) {
     console.error(err);
