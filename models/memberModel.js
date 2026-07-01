@@ -15,7 +15,7 @@ let query = `
         pkg.duration AS package_duration,
         pkg.price AS package_price,
         m.status AS membership_status, m.end_date,
-        p.amount AS membership_fee,
+        p.amount_received AS amount_received,
         p.method AS payment_method,
         p.screenshot AS payment_screenshot
       FROM users u
@@ -55,7 +55,7 @@ const getMemberById = async (userId) => {
            pkg.id AS package_id, pkg.name AS package_name,
            pkg.duration AS package_duration, pkg.price AS package_price,
            m.status AS membership_status, m.end_date,
-           p.amount AS membership_fee, p.method AS payment_method,
+           p.amount_received AS amount_received, p.method AS payment_method,
            p.screenshot AS payment_screenshot
     FROM users u
     LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
@@ -291,47 +291,23 @@ const updateActiveMembership = async (userId, data) => {
 
 const updateLatestPayment = async (userId, data) => {
   const [rows] = await db.query(
-    `
-    SELECT id
-    FROM payments
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-    `,
+    `SELECT id FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
     [userId]
   );
-
+ 
   if (rows.length === 0) {
     await db.query(
-      `
-      INSERT INTO payments
-      (user_id, amount, method, status, screenshot)
-      VALUES (?, ?, ?, 'paid', ?)
-      `,
-      [
-        userId,
-        data.amount,
-        data.paymentMethod,
-        data.screenshot,
-      ]
+      `INSERT INTO payments (user_id, amount_received, method, status, screenshot)
+       VALUES (?, ?, ?, 'paid', ?)`,
+      [userId, data.amount, data.paymentMethod, data.screenshot]
     );
     return;
   }
-
+ 
+  // ← FIXED: writes to amount_received not amount
   await db.query(
-    `
-    UPDATE payments
-    SET amount = ?,
-        method = ?,
-        screenshot = ?
-    WHERE id = ?
-    `,
-    [
-      data.amount,
-      data.paymentMethod,
-      data.screenshot,
-      rows[0].id,
-    ]
+    `UPDATE payments SET amount_received = ?, method = ?, screenshot = ? WHERE id = ?`,
+    [data.amount, data.paymentMethod, data.screenshot, rows[0].id]
   );
 };
 
@@ -339,28 +315,18 @@ const updateLatestPayment = async (userId, data) => {
 // ── Create Payment ──────────────────────────────
 const createPayment = async (
   userId,
-  amount,
+  amountReceived,      // ← renamed from "amount" for clarity — same value
   payment_method,
-  screenshotPath,       
-  package_id,   // add this so amount rcvd show     
-  membership_month // add this so amount rcvd show
+  screenshotPath,
+  membership_month      // ← NEW: pass current month so it shows correctly
 ) => {
   await db.query(
     `
     INSERT INTO payments
-    (user_id, amount, amount_received, package_id, package_amount, membership_month, method, status, screenshot)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'paid', ?)
+    (user_id, amount_received, method, status, screenshot, membership_month)
+    VALUES (?, ?, ?, 'paid', ?, ?)
   `,
-    [
-      userId,
-      amount,
-      amount,              // amount_received = amount paid
-      package_id || null,
-      amount,               // package_amount stored same as paid amount
-      membership_month || null,
-      payment_method || "cash",
-      screenshotPath,
-    ]
+    [userId, amountReceived, payment_method || "cash", screenshotPath, membership_month || null]
   );
 };
 // Freeze or unfreeze membership status

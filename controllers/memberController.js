@@ -263,32 +263,28 @@ const deleteMember = async (req, res) => {
 };
 
 // ── POST /admin/members/:id/membership ────────────────────────
-// Handles multipart/form-data when screenshot is uploaded
+// KEY CHANGE: passes membership_month, no longer passes package_id/amount
+// to createPayment — package data is always derived live, not stored twice.
 const assignMembership = async (req, res) => {
   const userId = req.params.id;
   const { 
     package_id, 
     start_date, 
     end_date, 
-    amount,
+    amount,              // ← this is the amount RECEIVED from the form
     payment_method, 
     existing_screenshot
-
   } = req.body;
-
+ 
   if (!package_id || !start_date || !end_date || !amount)
     return res.status(400).json({ success: false, message: "Missing required fields" });
-
-  
-  // Screenshot path — null if cash payment
-let screenshotPath = existing_screenshot || null;
-
-if (req.file) {
-  screenshotPath = req.file.path;
-}  // for checking
-  console.log(screenshotPath)
-  // ← NEW: calculate membership_month from start_date so it shows correctly
-  // in the Payments module (e.g. "July 2026")
+ 
+  let screenshotPath = existing_screenshot || null;
+  if (req.file) {
+    screenshotPath = req.file.path;
+  }
+ 
+  // Calculate membership_month from start_date for consistent display
   const monthNames = [
     'January','February','March','April','May','June',
     'July','August','September','October','November','December'
@@ -296,31 +292,21 @@ if (req.file) {
   const startDateObj = new Date(start_date);
   const membership_month = `${monthNames[startDateObj.getMonth()]} ${startDateObj.getFullYear()}`;
  
-
   try {
-    // Expire existing memberships
-    await MemberModel.expireMemberships(
-      userId
-    );
-
-    // create new membership
-    await MemberModel.createMembership (
-      userId, package_id, start_date, end_date
-    );
-
-// ← CHANGED: now passes package_id and membership_month too,
-    // so the first payment row has full data instead of NULL/0
+    await MemberModel.expireMemberships(userId);
+    await MemberModel.createMembership(userId, package_id, start_date, end_date);
+ 
+    // ← CHANGED: only passes amount (= amount_received) and membership_month
     await MemberModel.createPayment(
-      userId, amount, payment_method, screenshotPath,
-      package_id, membership_month
+      userId, amount, payment_method, screenshotPath, membership_month
     );
-
+ 
     return res.status(201).json({ success: true, message: "Membership assigned successfully" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
-};
+};;
 
 // for stattus in member module 
 // Freeze or unfreeze membership
