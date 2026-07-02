@@ -8,11 +8,24 @@ router.get('/profile', verifyToken, async (req, res) => {
     const userId = req.userId;
     console.log('User ID:', userId);
 
-    // ✅ Simple query pehle
-    const [rows] = await db.query(
-      'SELECT id, name, email, phone, created_at FROM users WHERE id = ?',
-      [userId]
-    );
+    // Get member with trainer and plan info
+    const [rows] = await db.query(`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.created_at,
+        t.name as trainer_name,
+        p.name as plan_name
+      FROM users u
+      LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
+      LEFT JOIN memberships m ON m.user_id = u.id
+      LEFT JOIN packages p ON p.id = m.package_id
+      WHERE u.id = ?
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    `, [userId]);
 
     console.log('Rows found:', rows.length);
 
@@ -20,7 +33,6 @@ router.get('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // ✅ Simple response
     res.json({ 
       member: {
         id: rows[0].id,
@@ -29,13 +41,13 @@ router.get('/profile', verifyToken, async (req, res) => {
         phone: rows[0].phone || '',
         date_of_birth: '',
         member_since: rows[0].created_at,
-        trainer_name: 'Not Assigned',
-        plan_name: 'No Plan',
+        trainer_name: rows[0].trainer_name || 'Not Assigned',
+        plan_name: rows[0].plan_name || 'No Plan',
       }
     });
 
   } catch (error) {
-    console.error('Error:', error.message); // ✅ Error print
+    console.error('Error:', error.message);
     res.status(500).json({ message: error.message });
   }
 });
@@ -149,14 +161,15 @@ router.put('/change-password', verifyToken, async (req, res) => {
     const userId = req.userId;
     const { current_password, new_password } = req.body;
 
-    // Current password check
+    console.log('User ID:', userId);
+    console.log('Current password entered:', current_password);
+
     const [rows] = await db.query(
       'SELECT password FROM users WHERE id = ?',
       [userId]
     );
 
-    const user = rows[0];
-    let isMatch = false;
+    console.log('Password in DB:', rows[0]?.password);
 
     // Plain text check
     if (current_password === user.password) {
