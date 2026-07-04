@@ -1,10 +1,19 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const UserModel = require("../models/userModel");
+const GMAIL_REGEX = /^[\w.-]+@gmail\.com$/i;
 const JWT_SECRET = "serve_ease";
+
+
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+   
+// for email
+  if (!GMAIL_REGEX.test(email || "")) {
+    return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });
+  }
+  
   try {
     console.log("EMAIL:", email);
 
@@ -39,6 +48,25 @@ const signup = async (req, res) => {
     name, phone, gender, email, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ success: false, message: "Name, email and password are required" });
+
+if (!GMAIL_REGEX.test(email)) {
+    return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });
+  }
+  // for phne 
+  const PAK_PHONE_REGEX = /^\+92\d{10}$/;
+
+if (!PAK_PHONE_REGEX.test(phone || "")) {
+  return res.status(400).json({
+    success: false,
+    message: "Please enter a valid Pakistani phone number."
+  });
+  if (!PAK_PHONE_REGEX.test(phone)) {
+  return res.status(400).json({
+    success: false,
+    message: "Please enter a valid Pakistani phone number."
+  });
+}
+}
 
   try {
     const existing = await UserModel.findByEmail(email);
