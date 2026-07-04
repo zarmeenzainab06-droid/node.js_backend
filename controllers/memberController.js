@@ -6,7 +6,7 @@ const fs = require("fs");
 // ── Multer config ──────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = "uploads/screenshots";
+    const dir = "uploads";
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -176,7 +176,7 @@ const updateMembership = async (req, res) => {
     let screenshotPath = existing_screenshot || null;
 
     if (req.file) {
-      screenshotPath = req.file.path;
+      screenshotPath = req.file.filename;
     }
 
     await MemberModel.updateActiveMembership(userId, {
@@ -281,7 +281,7 @@ const assignMembership = async (req, res) => {
  
   let screenshotPath = existing_screenshot || null;
   if (req.file) {
-    screenshotPath = req.file.path;
+    screenshotPath = req.file.filename;
   }
  
   // Calculate membership_month from start_date for consistent display

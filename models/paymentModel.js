@@ -3,17 +3,17 @@ const db = require("../config/db");
 
 
 // Create a payment record for legacy admin functionality
-const createPayment = async ({ userId, amount, method }) => {
+// const createPayment = async ({ userId, amount, method }) => {
 
-  // Insert payment into database with default paid status
-  const [result] = await db.query(
-    `INSERT INTO payments (user_id, amount, method, status) VALUES (?, ?, ?, 'paid')`,
-    [userId, amount, method || "cash"]
-  );
+//   // Insert payment into database with default paid status
+//   const [result] = await db.query(
+//     `INSERT INTO payments (user_id, amount, method, status) VALUES (?, ?, ?, 'paid')`,
+//     [userId, amount, method || "cash"]
+//   );
 
-  // Return newly created payment ID
-  return result.insertId;
-};
+//   // Return newly created payment ID
+//   return result.insertId;
+// };
 
 
 // Count all pending payments
@@ -80,7 +80,16 @@ const getAll = (filters = {}) => {
 const getById = (id) => {
   return db.query(`
     SELECT 
-      p.*,
+      p.id,
+      p.user_id,
+      p.membership_month,
+      p.amount_received,
+      p.method,
+      p.status,
+      p.screenshot,
+      p.payment_date,
+      p.transaction_id,
+      p.created_at,
       u.name              AS member_name,
       cur_pkg.package_id  AS package_id,
       cur_pkg.package_name,
@@ -198,7 +207,7 @@ const getCurrentMembershipForUser = (userId) => {
 module.exports = {
 
   // Legacy functions
-  createPayment,
+  // createPayment,
   countPending,
 
   // Payment management functions

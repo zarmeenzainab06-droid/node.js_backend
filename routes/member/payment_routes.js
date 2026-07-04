@@ -33,11 +33,10 @@ router.post('/submit', verifyToken, async (req, res) => {
       `INSERT INTO payments
 (
   user_id,
-  amount,
+  amount_received,
   method,
   status,
   membership_month,
-  package_id,
   screenshot,
   transaction_id
 )
@@ -76,7 +75,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
     const [rows] = await db.query(
       `SELECT 
         p.id,
-        p.amount,
+        p.amount_received,
         p.method,
         p.status,
         p.month,
@@ -101,7 +100,7 @@ router.get('/pending', verifyToken, async (req, res) => {
     const [rows] = await db.query(
       `SELECT 
         p.id,
-        p.amount,
+        p.amount_received,
         p.method,
         p.status,
         p.month,
