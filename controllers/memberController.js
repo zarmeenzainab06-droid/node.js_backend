@@ -171,6 +171,7 @@ const updateMembership = async (req, res) => {
       amount,
       paymentMethod,
       existing_screenshot,
+      transaction_id,          
     } = req.body;
 
     let screenshotPath = existing_screenshot || null;
@@ -189,6 +190,7 @@ const updateMembership = async (req, res) => {
       amount,
       paymentMethod,
       screenshot: screenshotPath,
+      transactionId: transaction_id,
     });
 
     return res.status(200).json({
@@ -273,7 +275,8 @@ const assignMembership = async (req, res) => {
     end_date, 
     amount,              // ← this is the amount RECEIVED from the form
     payment_method, 
-    existing_screenshot
+    existing_screenshot,
+    transaction_id,
   } = req.body;
  
   if (!package_id || !start_date || !end_date || !amount)
@@ -298,7 +301,7 @@ const assignMembership = async (req, res) => {
  
     // ← CHANGED: only passes amount (= amount_received) and membership_month
     await MemberModel.createPayment(
-      userId, amount, payment_method, screenshotPath, membership_month
+      userId, amount, payment_method, screenshotPath, membership_month,transaction_id
     );
  
     return res.status(201).json({ success: true, message: "Membership assigned successfully" });

@@ -297,17 +297,17 @@ const updateLatestPayment = async (userId, data) => {
  
   if (rows.length === 0) {
     await db.query(
-      `INSERT INTO payments (user_id, amount_received, method, status, screenshot)
-       VALUES (?, ?, ?, 'paid', ?)`,
-      [userId, data.amount, data.paymentMethod, data.screenshot]
+      `INSERT INTO payments (user_id, amount_received, method, status, screenshot,transaction_id)
+       VALUES (?, ?, ?, 'paid', ?, ?)`,
+      [userId, data.amount, data.paymentMethod, data.screenshot,data.transactionId || null]
     );
     return;
   }
  
   // ← FIXED: writes to amount_received not amount
   await db.query(
-    `UPDATE payments SET amount_received = ?, method = ?, screenshot = ? WHERE id = ?`,
-    [data.amount, data.paymentMethod, data.screenshot, rows[0].id]
+    `UPDATE payments SET amount_received = ?, method = ?, screenshot = ?,transaction_id = ? WHERE id = ?`,
+    [data.amount, data.paymentMethod, data.screenshot,data.transactionId || null, rows[0].id]
   );
 };
 
@@ -318,13 +318,15 @@ const createPayment = async (
   amountReceived,      // ← renamed from "amount" for clarity — same value
   payment_method,
   screenshotPath,
-  membership_month      // ← NEW: pass current month so it shows correctly
+  membership_month,      // ← NEW: pass current month so it shows correctly
+    transaction_id = null   
+
 ) => {
   await db.query(
     `
     INSERT INTO payments
-    (user_id, amount_received, method, status, screenshot, membership_month)
-    VALUES (?, ?, ?, 'paid', ?, ?)
+    (user_id, amount_received, method, status, screenshot, membership_month, transaction_id)
+    VALUES (?, ?, ?, 'paid', ?, ?,?)
   `,
     [userId, amountReceived, payment_method || "cash", screenshotPath, membership_month || null]
   );
