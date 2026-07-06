@@ -1,4 +1,3 @@
-
 // - createPayment/updatePayment no longer read package_id/package_amount
 //   from the request body — those are derived live via getAll/getById's
 //   JOIN with memberships+packages, never stored on the payments row.
@@ -8,6 +7,8 @@
 const PaymentModel = require("../models/paymentModel");
 const path = require("path");
 const fs = require("fs");
+const NotificationService = require("../services/notificationService"); // ← NEW: in-app notifications
+const db = require("../config/db"); // ← NEW: used to look up member name for notifications
 
 // Retrieve all payment records  GET /admin/payments
 const getAllPayments = async (req, res) => {
@@ -83,6 +84,17 @@ const createPayment = async (req, res) => {
       transaction_id: transaction_id || null,
     });
 
+    // ── Notification: payment received (only when actually paid) ──
+    if ((status || 'pending').toLowerCase() === 'paid') {
+      const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
+      await NotificationService.notifyPaymentReceived({
+        paymentId: result.insertId,
+        memberId: user_id,
+        memberName: memberRow ? memberRow.name : "A member",
+        amount: amount_received,
+      });
+    }
+
     return res.status(201).json({
       success: true,
       message: "Payment created",
@@ -138,6 +150,19 @@ const updatePayment = async (req, res) => {
       transaction_id: transaction_id || null,
     });
 
+    // ── Notification: payment received (only on transition into 'paid') ──
+    const wasNotPaid = (old[0].status || '').toLowerCase() !== 'paid';
+    const isNowPaid = (status || 'pending').toLowerCase() === 'paid';
+    if (wasNotPaid && isNowPaid) {
+      const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [old[0].user_id]);
+      await NotificationService.notifyPaymentReceived({
+        paymentId: req.params.id,
+        memberId: old[0].user_id,
+        memberName: memberRow ? memberRow.name : "A member",
+        amount: amount_received,
+      });
+    }
+
     return res.status(200).json({ success: true, message: "Payment updated" });
   } catch (err) {
     console.error("update payment error:", err);
@@ -156,7 +181,22 @@ const updatePaymentStatus = async (req, res) => {
         message: `Status must be one of: ${allowed.join(', ')}`,
       });
     }
+    // Look up the payment first so we know if this is a transition into 'paid'
+    const [rows] = await PaymentModel.getById(req.params.id);
+    const wasNotPaid = rows.length && (rows[0].status || '').toLowerCase() !== 'paid';
+
     await PaymentModel.updateStatus(req.params.id, status.toLowerCase());
+
+    if (wasNotPaid && status.toLowerCase() === 'paid') {
+      const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [rows[0].user_id]);
+      await NotificationService.notifyPaymentReceived({
+        paymentId: req.params.id,
+        memberId: rows[0].user_id,
+        memberName: memberRow ? memberRow.name : "A member",
+        amount: rows[0].amount_received,
+      });
+    }
+
     return res.status(200).json({ success: true, message: 'Status updated' });
   } catch (err) {
     console.error('updatePaymentStatus error:', err);

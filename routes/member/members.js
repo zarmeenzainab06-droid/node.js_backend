@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
 const { verifyToken } = require('../../middleware/auth');
+const bcrypt = require('bcrypt');
 
+// Get member profile with trainer and plan
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
-    console.log('User ID:', userId);
+    console.log('Profile - User ID:', userId);
 
-    // Get member with trainer and plan info
     const [rows] = await db.query(`
       SELECT 
         u.id,
@@ -26,8 +27,6 @@ router.get('/profile', verifyToken, async (req, res) => {
       ORDER BY m.created_at DESC
       LIMIT 1
     `, [userId]);
-
-    console.log('Rows found:', rows.length);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -47,10 +46,12 @@ router.get('/profile', verifyToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Profile Error:', error.message);
     res.status(500).json({ message: error.message });
   }
 });
+
+// Get membership detail
 router.get('/membership', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
@@ -93,6 +94,8 @@ router.get('/membership', verifyToken, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Get assigned trainer
 router.get('/trainer', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
@@ -108,7 +111,6 @@ router.get('/trainer', verifyToken, async (req, res) => {
           name: 'Not Assigned',
           email: 'N/A',
           phone: 'N/A',
-          specialization: 'N/A',
         }
       });
     }
@@ -135,19 +137,19 @@ router.get('/trainer', verifyToken, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-// Update Profile
+
+// Update profile
 router.put('/update-profile', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, phone, date_of_birth } = req.body;
+    const { name, phone } = req.body;
 
     await db.query(
-      `UPDATE users SET name = ?, phone = ?, updated_at = NOW()
-       WHERE id = ?`,
+      'UPDATE users SET name = ?, phone = ? WHERE id = ?',
       [name, phone, userId]
     );
 
-    res.json({ success: true, message: 'Profile updated successfully' });
+    res.json({ success: true, message: 'Profile update ho gaya' });
 
   } catch (error) {
     console.error('Update Error:', error.message);
@@ -155,31 +157,38 @@ router.put('/update-profile', verifyToken, async (req, res) => {
   }
 });
 
-// Change Password
+// Change password
 router.put('/change-password', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
     const { current_password, new_password } = req.body;
 
-    console.log('User ID:', userId);
-    console.log('Current password entered:', current_password);
+    console.log('Change password - userId:', userId);
 
+    // Get password from DB
     const [rows] = await db.query(
       'SELECT password FROM users WHERE id = ?',
       [userId]
     );
 
-    console.log('Password in DB:', rows[0]?.password);
-
-    // Plain text check
-    if (current_password === user.password) {
-      isMatch = true;
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
+    const dbPassword = rows[0].password;
+    let isMatch = false;
+
     // Bcrypt check
-    const bcrypt = require('bcrypt');
-    if (!isMatch && user.password.startsWith('$2a$')) {
-      isMatch = await bcrypt.compare(current_password, user.password);
+    if (dbPassword && dbPassword.startsWith('$2')) {
+      isMatch = await bcrypt.compare(current_password, dbPassword);
+      console.log('Bcrypt match:', isMatch);
+    } else {
+      // Plain text check
+      isMatch = current_password === dbPassword;
+      console.log('Plain text match:', isMatch);
     }
 
     if (!isMatch) {
@@ -189,17 +198,33 @@ router.put('/change-password', verifyToken, async (req, res) => {
       });
     }
 
-    // New password save
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters'
+      });
+    }
+
+    // Save new password
     await db.query(
       'UPDATE users SET password = ? WHERE id = ?',
       [new_password, userId]
     );
 
-    res.json({ success: true, message: 'Password changed successfully' });
+    console.log('Password updated successfully');
+
+    res.json({
+      success: true,
+      message: 'Password change ho gaya!'
+    });
 
   } catch (error) {
     console.error('Password Error:', error.message);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
+
 module.exports = router;

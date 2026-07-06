@@ -83,22 +83,51 @@ router.get("/members", verifyTrainer, async (req, res) => {
  
 // ─────────────────────────────────────────────────────────────
 // GET /trainer/schedule/today
+// Returns members with real slot times from slots table
 // ─────────────────────────────────────────────────────────────
 router.get("/schedule/today", verifyTrainer, async (req, res) => {
   const trainerId = req.user.id;
   try {
     const [rows] = await db.query(
       `SELECT
-         u.id AS member_id,
-         u.name AS memberName,
+         u.id                                          AS member_id,
+         u.name                                        AS memberName,
          u.training_slot,
-         COALESCE(u.workout_type, 'General Fitness') AS workout_type
+         COALESCE(u.workout_type, 'General Fitness')   AS workout_type,
+         s.id                                          AS slot_id,
+         s.name                                        AS slot_name,
+         s.start_time,
+         s.end_time,
+         s.schedule_days
        FROM users u
-       WHERE u.role = 'user' AND u.trainer_id = ? AND u.training_slot IS NOT NULL
-       ORDER BY FIELD(u.training_slot, 'morning', 'midday', 'evening', 'night'), u.name ASC`,
+       LEFT JOIN slots s ON LOWER(s.name) = LOWER(u.training_slot)
+       WHERE u.role = 'user'
+         AND u.trainer_id = ?
+         AND u.training_slot IS NOT NULL
+       ORDER BY
+         COALESCE(s.start_time, '23:59:59') ASC,
+         u.name ASC`,
       [trainerId]
     );
-    res.json({ success: true, schedule: rows });
+ 
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const todayDay = days[new Date().getDay()];
+ 
+    const schedule = rows.map(r => ({
+      member_id:     r.member_id,
+      memberName:    r.memberName,
+      training_slot: r.training_slot,
+      workout_type:  r.workout_type,
+      slot_id:       r.slot_id,
+      slot_name:     r.slot_name   || r.training_slot,
+      start_time:    r.start_time  || null,
+      end_time:      r.end_time    || null,
+      runs_today:    r.schedule_days
+                       ? r.schedule_days.split(',').map(d => d.trim()).includes(todayDay)
+                       : true,
+    }));
+ 
+    res.json({ success: true, schedule });
   } catch (err) {
     console.error("Schedule error:", err);
     res.status(500).json({ success: false, message: err.message });

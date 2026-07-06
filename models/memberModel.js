@@ -322,7 +322,8 @@ const createPayment = async (
     transaction_id = null   
 
 ) => {
-  await db.query(
+  // ← return the query result so callers can read insertId (e.g. for notifications)
+  return db.query(
     `
     INSERT INTO payments
     (user_id, amount_received, method, status, screenshot, membership_month, transaction_id)

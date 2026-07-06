@@ -2,6 +2,8 @@ const MemberModel = require("../models/memberModel");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const NotificationService = require("../services/notificationService"); // ← NEW: in-app notifications
+const db = require("../config/db"); // ← NEW: used to check for pre-existing memberships
 
 // ── Multer config ──────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -102,6 +104,16 @@ const createMember = async (req, res) => {
     password,
   });
 
+  // ── Notifications: member added (admin) + assigned trainer (if any) ──
+  await NotificationService.notifyMemberAdded({ memberId: userId, memberName: name });
+  if (trainer_id) {
+    await NotificationService.notifyMemberAssignedToTrainer({
+      trainerId: trainer_id,
+      memberId: userId,
+      memberName: name,
+    });
+  }
+
   return res.status(201).json({
     success: true,
     message: "Member created successfully",
@@ -142,6 +154,14 @@ const updateMember = async (req, res) => {
     if (existing.length > 0)
       return res.status(400).json({ success: false, message: "Email already in use" });
 
+    // Only notify the trainer if the assigned trainer is actually changing
+    const [[currentUserRow]] = await db.query(
+      "SELECT trainer_id FROM users WHERE id = ?",
+      [userId]
+    );
+    const trainerChanged =
+      trainer_id && String(currentUserRow?.trainer_id) !== String(trainer_id);
+
     await MemberModel.updateMember (userId,{
       name,
       email,
@@ -151,6 +171,16 @@ const updateMember = async (req, res) => {
       trainer_id, 
       password, // ← add password
     });
+
+    // ── Notification: member (re)assigned to a trainer ──
+    if (trainerChanged) {
+      await NotificationService.notifyMemberAssignedToTrainer({
+        trainerId: trainer_id,
+        memberId: userId,
+        memberName: name,
+      });
+    }
+
     return res.status(200).json({ success: true, message: "Member updated successfully" });
   } 
   catch (err) {
@@ -193,6 +223,25 @@ const updateMembership = async (req, res) => {
       transactionId: transaction_id,
     });
 
+    // ── Notifications: membership renewed + payment received ──
+    const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
+    const memberName = memberRow ? memberRow.name : "A member";
+
+    await NotificationService.notifyMembershipRenewed({
+      memberId: userId,
+      memberName,
+      endDate,
+      isNew: false,
+    });
+    if (amount) {
+      await NotificationService.notifyPaymentReceived({
+        paymentId: null,
+        memberId: userId,
+        memberName,
+        amount,
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Membership updated successfully",
@@ -207,41 +256,6 @@ const updateMembership = async (req, res) => {
   }
 };
 
-
-// for updatemembership only no duplicate
-// const updateMembership = async (req, res) => {
-//   try {
-//     const userId = req.params.id;
-
-//     const {
-//       packageId,
-//       startDate,
-//       endDate,
-//       amount,
-//       paymentMethod,
-//     } = req.body;
-
-    
-
-//     // 🔴 UPDATE payment ONLY if needed (not always create new)
-//     await MemberModel.updateLatestPayment(userId, {
-//       amount,
-//       paymentMethod,
-//       screenshot: req.file?.path,
-//     });
-
-//     return res.json({
-//       success: true,
-//       message: "Membership updated successfully",
-//     });
-
-//   } catch (err) {
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message,
-//     });
-//   }
-// };
 
 // ── DELETE /admin/members/:id ──────────────────────────────────
 const deleteMember = async (req, res) => {
@@ -296,13 +310,38 @@ const assignMembership = async (req, res) => {
   const membership_month = `${monthNames[startDateObj.getMonth()]} ${startDateObj.getFullYear()}`;
  
   try {
+    // Check whether this member already had any membership before this call,
+    // so we can phrase the notification as "assigned" (first time) vs "renewed".
+    const [[{ priorCount }]] = await db.query(
+      "SELECT COUNT(*) AS priorCount FROM memberships WHERE user_id = ?",
+      [userId]
+    );
+    const isNewMembership = priorCount === 0;
+
+    const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
+    const memberName = memberRow ? memberRow.name : "A member";
+
     await MemberModel.expireMemberships(userId);
     await MemberModel.createMembership(userId, package_id, start_date, end_date);
  
     // ← CHANGED: only passes amount (= amount_received) and membership_month
-    await MemberModel.createPayment(
+    const [paymentResult] = await MemberModel.createPayment(
       userId, amount, payment_method, screenshotPath, membership_month,transaction_id
     );
+
+    // ── Notifications: membership assigned/renewed + payment received ──
+    await NotificationService.notifyMembershipRenewed({
+      memberId: userId,
+      memberName,
+      endDate: end_date,
+      isNew: isNewMembership,
+    });
+    await NotificationService.notifyPaymentReceived({
+      paymentId: paymentResult?.insertId,
+      memberId: userId,
+      memberName,
+      amount,
+    });
  
     return res.status(201).json({ success: true, message: "Membership assigned successfully" });
   } catch (err) {
