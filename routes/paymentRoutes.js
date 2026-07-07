@@ -2,6 +2,8 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const { verifyAdmin } = require("../middleware/auth");
+
 
 // Import controller
 const PaymentController = require("../controllers/paymentController");

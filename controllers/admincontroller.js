@@ -40,14 +40,14 @@ const getRecentActivity = async (req, res) => {
   }
 };
 
-const getTrainers = async (req, res) => {
-  try {
-    const trainers = await UserModel.findAllTrainers();
-    return res.status(200).json({ success: true, trainers });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+// const getTrainers = async (req, res) => {
+//   try {
+//     const trainers = await UserModel.findAllTrainers();
+//     return res.status(200).json({ success: true, trainers });
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
 
-module.exports = { getDashboardStats, getRecentActivity, getTrainers };
+module.exports = { getDashboardStats, getRecentActivity };  //getTrainers

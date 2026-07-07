@@ -1,5 +1,7 @@
 // Import required modules
 const express = require("express");
+const { verifyAdmin } = require("../middleware/auth");
+
 
 // Import controller
 const ReportController = require("../controllers/reportController");
@@ -19,5 +21,4 @@ router.get("/membership", ReportController.getMembershipReport);
 // Trends & analytics (supports ?months=6)
 router.get("/trends", ReportController.getTrendsReport);
 
-// Export router for use in application
 module.exports = router;

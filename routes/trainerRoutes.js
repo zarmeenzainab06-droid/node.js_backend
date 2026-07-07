@@ -5,6 +5,7 @@ const express = require("express");
 const router = express.Router();
 
 
+
 // Import trainer controller
 const trainerController = require("../controllers/trainerController");
 

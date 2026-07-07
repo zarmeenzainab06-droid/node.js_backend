@@ -1,13 +1,13 @@
 const db = require("../config/db");
 
 // ── Auth ──────────────────────────────────────────────────────
-const findByEmailAndPassword = async (email, password) => {
-  const [rows] = await db.query(
-    "SELECT id, name, email, role, phone FROM users WHERE email = ? AND password = ?",
-    [email, password]
-  );
-  return rows[0] || null;
-};
+// const findByEmailAndPassword = async (email, password) => {
+//   const [rows] = await db.query(
+//     "SELECT id, name, email, role, phone FROM users WHERE email = ? AND password = ?",
+//     [email, password]
+//   );
+//   return rows[0] || null;
+// };
 
 const findByEmail = async (email) => {
   const [rows] = await db.query(    `SELECT id, name, email, password, role, phone FROM users WHERE email = ?`,
@@ -77,36 +77,36 @@ const createUser = async ({ name, phone, gender, email, password }) => {
 //   return result.insertId;
 // };
 
-const updateMember = async (userId, { name, email, phone, gender, training_slot, trainer_id }) => {
-  await db.query(
-    `UPDATE users SET name = ?, email = ?, phone = ?, gender = ?,
-     training_slot = ?, trainer_id = ?
-     WHERE id = ? AND role = 'user'`,
-    [name, email, phone || null, gender || "male", training_slot || "morning", trainer_id || null, userId]
-  );
-};
+// const updateMember = async (userId, { name, email, phone, gender, training_slot, trainer_id }) => {
+//   await db.query(
+//     `UPDATE users SET name = ?, email = ?, phone = ?, gender = ?,
+//      training_slot = ?, trainer_id = ?
+//      WHERE id = ? AND role = 'user'`,
+//     [name, email, phone || null, gender || "male", training_slot || "morning", trainer_id || null, userId]
+//   );
+// };
 
-const findMemberEmailConflict = async (email, excludeId) => {
-  const [rows] = await db.query(
-    "SELECT id FROM users WHERE email = ? AND id != ?",
-    [email, excludeId]
-  );
-  return rows[0] || null;
-};
+// const findMemberEmailConflict = async (email, excludeId) => {
+//   const [rows] = await db.query(
+//     "SELECT id FROM users WHERE email = ? AND id != ?",
+//     [email, excludeId]
+//   );
+//   return rows[0] || null;
+// };
 
-const deleteMemberById = async (userId) => {
-  await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
-  await db.query(`DELETE FROM memberships WHERE user_id = ?`, [userId]);
-  await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
-};
+// const deleteMemberById = async (userId) => {
+//   await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
+//   await db.query(`DELETE FROM memberships WHERE user_id = ?`, [userId]);
+//   await db.query(`DELETE FROM users WHERE id = ? AND role = 'user'`, [userId]);
+// };
 
-// ── Trainers ──────────────────────────────────────────────────
-const findAllTrainers = async () => {
-  const [rows] = await db.query(
-    `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
-  );
-  return rows;
-};
+// // ── Trainers ──────────────────────────────────────────────────
+// const findAllTrainers = async () => {
+//   const [rows] = await db.query(
+//     `SELECT id, name, email FROM users WHERE role = 'trainer' ORDER BY name ASC`
+//   );
+//   return rows;
+// };
 
 // ── Stats ─────────────────────────────────────────────────────
 const countTotalMembers = async () => {
@@ -124,15 +124,15 @@ const countTotalTrainers = async () => {
 };
 
 module.exports = {
-  findByEmailAndPassword,
+  // findByEmailAndPassword,
   findByEmail,
   createUser,
   // findAllMembers,
   // createMember,
-  updateMember,
-  findMemberEmailConflict,
-  deleteMemberById,
-  findAllTrainers,
+  // updateMember,
+  // findMemberEmailConflict,
+  // deleteMemberById,
+  // findAllTrainers,
   countTotalMembers,
   countTotalTrainers,
 };
