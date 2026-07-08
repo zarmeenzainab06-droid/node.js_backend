@@ -20,11 +20,13 @@ let query = `
         p.screenshot AS payment_screenshot
       FROM users u
       LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
-      LEFT JOIN memberships m ON m.id = (
-        SELECT id FROM memberships
-        WHERE user_id = u.id
-        ORDER BY created_at DESC LIMIT 1
-      )
+      
+     LEFT JOIN memberships m ON m.id = (
+  SELECT id FROM memberships
+  WHERE user_id = u.id AND status = 'active'
+  ORDER BY created_at DESC LIMIT 1
+)
+      
       LEFT JOIN packages pkg ON pkg.id = m.package_id
       LEFT JOIN payments p ON p.id = (
         SELECT id FROM payments
@@ -127,31 +129,7 @@ const createMember = async ({
   return result.insertId;
 };
 
-// ── Update Member ───────────────────────────────
-// const updateMember = async (
-//   userId,
-//   { name, email, phone, gender, training_slot, trainer_id }
-// ) => {
-//   const [result] = await db.query(
-//     `
-//     UPDATE users
-//     SET name = ?, email = ?, phone = ?, gender = ?,
-//         training_slot = ?, trainer_id = ?
-//     WHERE id = ? AND role = 'user'
-//   `,
-//     [
-//       name,
-//       email,
-//       phone || null,
-//       gender || "male",
-//       training_slot || "morning",
-//       trainer_id || null,
-//       userId,
-//     ]
-//   );
 
-//   return result.affectedRows;
-// };
 // PD edit mode
 const updateMember = async (
   userId,
@@ -272,23 +250,6 @@ const updateActiveMembership = async (userId, data) => {
   );
 };
 
-// same for payment no duplication
-// const updateLatestPayment = async (userId, data) => {
-//   await db.query(
-//     `UPDATE payments
-//      SET amount = ?, method = ?, screenshot = ?
-//      WHERE id = (
-//         SELECT id FROM (
-//           SELECT id FROM payments
-//           WHERE user_id = ?
-//           ORDER BY id DESC
-//           LIMIT 1
-//         ) AS temp
-//      )`,
-//     [data.amount, data.paymentMethod, data.screenshot, userId]
-//   );
-// };
-
 const updateLatestPayment = async (userId, data) => {
   const [rows] = await db.query(
     `SELECT id FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
@@ -323,13 +284,13 @@ const createPayment = async (
 
 ) => {
   // ← return the query result so callers can read insertId (e.g. for notifications)
-  return db.query(
+  return await db.query(
     `
     INSERT INTO payments
     (user_id, amount_received, method, status, screenshot, membership_month, transaction_id)
     VALUES (?, ?, ?, 'paid', ?, ?,?)
   `,
-    [userId, amountReceived, payment_method || "cash", screenshotPath, membership_month || null]
+    [userId, amountReceived, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]
   );
 };
 // Freeze or unfreeze membership status

@@ -183,24 +183,24 @@ SELECT COALESCE(SUM(amount_received), 0) AS total_revenue FROM payments WHERE st
 };
 // ── Get member's CURRENT active package + live price ──────────────────────
 
-const getCurrentMembershipForUser = (userId) => {
-  return db.query(`
-    SELECT 
-      m.id            AS membership_id,
-      m.package_id,
-      pkg.name        AS package_name,
-      pkg.price       AS package_amount,   -- ← always LIVE price, never stale
-      m.start_date,
-      m.end_date,
-      m.status        AS membership_status
-    FROM memberships m
-    JOIN packages pkg ON pkg.id = m.package_id
-    WHERE m.user_id = ?
-      AND m.status = 'active'
-    ORDER BY m.created_at DESC
-    LIMIT 1
-  `, [userId]);
-};
+// const getCurrentMembershipForUser = (userId) => {
+//   return db.query(`
+//     SELECT 
+//       m.id            AS membership_id,
+//       m.package_id,
+//       pkg.name        AS package_name,
+//       pkg.price       AS package_amount,   -- ← always LIVE price, never stale
+//       m.start_date,
+//       m.end_date,
+//       m.status        AS membership_status
+//     FROM memberships m
+//     JOIN packages pkg ON pkg.id = m.package_id
+//     WHERE m.user_id = ?
+//       AND m.status = 'active'
+//     ORDER BY m.created_at DESC
+//     LIMIT 1
+//   `, [userId]);
+// };
 
 
 // Export model functions
@@ -217,5 +217,5 @@ module.exports = {
   update,
   delete: deletePayment,
   updateStatus,// for update stats separtely
-getCurrentMembershipForUser,
+// getCurrentMembershipForUser,
 };
