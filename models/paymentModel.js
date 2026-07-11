@@ -178,17 +178,14 @@ const updateStatus = (id, status) => {
 
 // Retrieve payment statistics
 const getStats = () => {
-
   return db.query(`
-    SELECT COUNT(*) AS total FROM payments;
-
-SELECT COUNT(*) AS total_paid FROM payments WHERE status = 'paid';
-
-SELECT COUNT(*) AS total_pending FROM payments WHERE status = 'pending';
-
-SELECT COUNT(*) AS total_failed FROM payments WHERE status = 'failed';
-
-SELECT COALESCE(SUM(amount_received), 0) AS total_revenue FROM payments WHERE status = 'paid';
+    SELECT 
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS total_paid,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS total_pending,
+      SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS total_failed,
+      COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_received ELSE 0 END), 0) AS total_revenue
+    FROM payments
   `);
 };
 // ── Get member's CURRENT active package + live price ──────────────────────

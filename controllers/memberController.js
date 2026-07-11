@@ -85,14 +85,49 @@ const createMember = async (req, res) => {
   // for password
   if (!password)
     return res.status(400).json({ success: false, message: "Password is required" });
- try {
-  const existing = await MemberModel.findByEmail(email);
+  try {
+    const existing = await MemberModel.findByEmail(email);
 
-  if (existing.length > 0)
-    return res.status(400).json({
-      success: false,
-      message: "Email already registered"
-    });
+    if (existing.length > 0)
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered"
+      });
+
+    // Check Slot Capacity
+    if (training_slot && training_slot !== 'none') {
+      const [[slotInfo]] = await db.query(
+        `SELECT s.name, s.capacity, COUNT(u.id) AS current_count
+         FROM slots s
+         LEFT JOIN users u ON u.training_slot = (
+           CASE s.name
+             WHEN 'Morning Batch' THEN 'morning'
+             WHEN 'Mid-Day Batch' THEN 'midday'
+             WHEN 'Evening Batch' THEN 'evening'
+             WHEN 'Night Batch'   THEN 'night'
+             ELSE LOWER(REPLACE(s.name, ' ', ''))
+           END
+         ) AND u.role = 'user'
+         WHERE (
+           CASE s.name
+             WHEN 'Morning Batch' THEN 'morning'
+             WHEN 'Mid-Day Batch' THEN 'midday'
+             WHEN 'Evening Batch' THEN 'evening'
+             WHEN 'Night Batch'   THEN 'night'
+             ELSE LOWER(REPLACE(s.name, ' ', ''))
+           END
+         ) = ?
+         GROUP BY s.id`,
+        [training_slot]
+      );
+
+      if (slotInfo && slotInfo.current_count >= slotInfo.capacity) {
+        return res.status(400).json({
+          success: false,
+          message: `The training slot '${slotInfo.name}' is full. Capacity is ${slotInfo.capacity} members.`
+        });
+      }
+    }
 
   const userId = await MemberModel.createMember({
     name,
@@ -156,11 +191,46 @@ const updateMember = async (req, res) => {
 
     // Only notify the trainer if the assigned trainer is actually changing
     const [[currentUserRow]] = await db.query(
-      "SELECT trainer_id FROM users WHERE id = ?",
+      "SELECT trainer_id, training_slot FROM users WHERE id = ?",
       [userId]
     );
     const trainerChanged =
       trainer_id && String(currentUserRow?.trainer_id) !== String(trainer_id);
+
+    // Check Slot Capacity if it is changing
+    if (training_slot && training_slot !== 'none' && currentUserRow?.training_slot !== training_slot) {
+      const [[slotInfo]] = await db.query(
+        `SELECT s.name, s.capacity, COUNT(u.id) AS current_count
+         FROM slots s
+         LEFT JOIN users u ON u.training_slot = (
+           CASE s.name
+             WHEN 'Morning Batch' THEN 'morning'
+             WHEN 'Mid-Day Batch' THEN 'midday'
+             WHEN 'Evening Batch' THEN 'evening'
+             WHEN 'Night Batch'   THEN 'night'
+             ELSE LOWER(REPLACE(s.name, ' ', ''))
+           END
+         ) AND u.role = 'user'
+         WHERE (
+           CASE s.name
+             WHEN 'Morning Batch' THEN 'morning'
+             WHEN 'Mid-Day Batch' THEN 'midday'
+             WHEN 'Evening Batch' THEN 'evening'
+             WHEN 'Night Batch'   THEN 'night'
+             ELSE LOWER(REPLACE(s.name, ' ', ''))
+           END
+         ) = ?
+         GROUP BY s.id`,
+        [training_slot]
+      );
+
+      if (slotInfo && slotInfo.current_count >= slotInfo.capacity) {
+        return res.status(400).json({
+          success: false,
+          message: `The training slot '${slotInfo.name}' is full. Capacity is ${slotInfo.capacity} members.`
+        });
+      }
+    }
 
     await MemberModel.updateMember (userId,{
       name,
@@ -355,13 +425,30 @@ const assignMembership = async (req, res) => {
 const freezeMembership = async (req, res) => {
   try {
     const userId = req.params.id;
-    const { action } = req.body;
+    const { action, duration } = req.body;
 
     // Decide status based on action
     const newStatus = action === "freeze" ? "frozen" : "active";
 
     // Call model function (DB logic is separated)
     await MemberModel.updateMembershipStatus(userId, newStatus);
+
+    // If freezing, set freeze_until in latest membership
+    if (newStatus === "frozen") {
+      const days = parseInt(duration) || 15;
+      await db.query(
+        `UPDATE memberships SET freeze_until = DATE_ADD(NOW(), INTERVAL ? DAY)
+         WHERE user_id = ? AND status = 'frozen'`,
+        [days, userId]
+      );
+    } else {
+      // If unfreezing, clear freeze_until
+      await db.query(
+        `UPDATE memberships SET freeze_until = NULL
+         WHERE user_id = ?`,
+        [userId]
+      );
+    }
 
     // Fetch member name for notification
     const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
@@ -386,6 +473,91 @@ const freezeMembership = async (req, res) => {
   }
 };
 
+const checkInMember = async (req, res) => {
+  try {
+    const { searchQuery } = req.body;
+    if (!searchQuery) {
+      return res.status(400).json({ success: false, message: "Member ID, Phone, or Email is required" });
+    }
+
+    // 1. Find user
+    const [users] = await db.query(
+      `SELECT id, name, email, phone FROM users 
+       WHERE (phone = ? OR email = ? OR id = ?) AND role = 'user' 
+       LIMIT 1`,
+      [searchQuery, searchQuery, searchQuery]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: "Member not found" });
+    }
+
+    const member = users[0];
+
+    // 2. Fetch membership status
+    const [memberships] = await db.query(
+      `SELECT status, end_date FROM memberships 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC LIMIT 1`,
+      [member.id]
+    );
+
+    if (memberships.length === 0) {
+      return res.status(400).json({
+        success: false,
+        access: "denied",
+        memberName: member.name,
+        reason: "No membership assigned to this user"
+      });
+    }
+
+    const mship = memberships[0];
+
+    if (mship.status !== "active") {
+      return res.status(400).json({
+        success: false,
+        access: "denied",
+        memberName: member.name,
+        reason: `Membership is currently ${mship.status}`
+      });
+    }
+
+    // 3. Check payment status for current month
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+
+    const [payments] = await db.query(
+      `SELECT status FROM payments 
+       WHERE user_id = ? AND membership_month = ? 
+       ORDER BY created_at DESC LIMIT 1`,
+      [member.id, currentMonth]
+    );
+
+    if (payments.length > 0 && payments[0].status !== "paid" && payments[0].status !== "partial") {
+      return res.status(400).json({
+        success: false,
+        access: "denied",
+        memberName: member.name,
+        reason: `Current month payment is ${payments[0].status}`
+      });
+    }
+
+    // 4. Log check-in
+    await db.query(`INSERT INTO check_ins (user_id) VALUES (?)`, [member.id]);
+
+    return res.status(200).json({
+      success: true,
+      access: "granted",
+      memberName: member.name,
+      message: "Check-in logged successfully"
+    });
+
+  } catch (err) {
+    console.error("Check-in error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -395,5 +567,6 @@ module.exports = {
   assignMembership,
   uploadScreenshot,
   updateMembership,
-  freezeMembership
+  freezeMembership,
+  checkInMember
 };

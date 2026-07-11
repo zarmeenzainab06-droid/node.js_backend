@@ -53,6 +53,37 @@ const autoExpireMemberships = async () => {
 // for auto expire status in memebr module
 cron.schedule('0 0 * * *', autoExpireMemberships);
 
+// ── Auto-unfreeze memberships when freeze period ends ──────────
+const autoUnfreezeMemberships = async () => {
+  try {
+    const [rows] = await db.query(`
+      SELECT user_id FROM memberships
+      WHERE status = 'frozen' AND freeze_until <= CURDATE()
+    `);
+    if (rows.length > 0) {
+      for (const row of rows) {
+        await db.query(`
+          UPDATE memberships SET status = 'active', freeze_until = NULL
+          WHERE user_id = ? AND status = 'frozen'
+        `, [row.user_id]);
+
+        const [[userRow]] = await db.query("SELECT name FROM users WHERE id = ?", [row.user_id]);
+        const memberName = userRow ? userRow.name : "Member";
+
+        await NotificationService.notifyMembershipFrozen({
+          memberId: row.user_id,
+          memberName,
+          action: 'unfreeze'
+        });
+      }
+      console.log(`Auto-unfroze ${rows.length} memberships`);
+    }
+  } catch (err) {
+    console.error('Auto-unfreeze error:', err.message);
+  }
+};
+cron.schedule('0 0 * * *', autoUnfreezeMemberships);
+
 // ── Notify members whose membership is expiring soon ──────────
 // Fires an in-app notification (admin + member) exactly
 // NOTIFY_DAYS_BEFORE_EXPIRY days before a membership's end_date.

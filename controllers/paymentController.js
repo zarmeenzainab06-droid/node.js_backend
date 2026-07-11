@@ -106,6 +106,8 @@ const createPayment = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: amount_received,
       });
+      // Auto-activate membership status
+      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [user_id]);
     }
 
     return res.status(201).json({
@@ -174,6 +176,8 @@ const updatePayment = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: amount_received,
       });
+      // Auto-activate membership status
+      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [old[0].user_id]);
     }
 
     return res.status(200).json({ success: true, message: "Payment updated" });
@@ -208,6 +212,8 @@ const updatePaymentStatus = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: rows[0].amount_received,
       });
+      // Auto-activate membership status
+      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [rows[0].user_id]);
     }
 
     return res.status(200).json({ success: true, message: 'Status updated' });

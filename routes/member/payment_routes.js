@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
 const { verifyToken } = require('../../middleware/auth');
+const NotificationService = require('../../services/notificationService');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -46,11 +47,31 @@ router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res
       }
     }
 
+    // Check if expected amount is already logged for this month
+    const [existingExpected] = await db.query(
+      `SELECT SUM(amount) AS total_expected FROM payments 
+       WHERE user_id = ? AND membership_month = ?`,
+      [userId, targetMonth]
+    );
+
+    const hasExpected = existingExpected[0] && Number(existingExpected[0].total_expected) > 0;
+    let expectedAmount = 0;
+    if (!hasExpected) {
+      const [mship] = await db.query(
+        `SELECT p.price FROM memberships m
+         JOIN packages p ON p.id = m.package_id
+         WHERE m.user_id = ? AND m.status = 'active'
+         ORDER BY m.created_at DESC LIMIT 1`,
+        [userId]
+      );
+      expectedAmount = mship[0]?.price || amount;
+    }
+
     const [result] = await db.query(
       `INSERT INTO payments 
-        (user_id, amount_received, method, status, membership_month, screenshot, transaction_id) 
-       VALUES (?, ?, ?, 'pending', ?, ?, ?)`,
-      [userId, amount, method, targetMonth || null, screenshotPath, transaction_id || null]
+        (user_id, amount, amount_received, method, status, membership_month, screenshot, transaction_id) 
+       VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
+      [userId, expectedAmount, amount, method, targetMonth || null, screenshotPath, transaction_id || null]
     );
 
     res.json({
@@ -103,11 +124,24 @@ router.get('/pending', verifyToken, async (req, res) => {
 router.put('/approve/:id', verifyToken, async (req, res) => {
   try {
     const paymentId = req.params.id;
-    await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
-    const [payRows] = await db.query('SELECT user_id FROM payments WHERE id = ?', [paymentId]);
-    if (payRows.length > 0) {
-      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [payRows[0].user_id]);
+    const [payRows] = await db.query('SELECT user_id, amount_received FROM payments WHERE id = ?', [paymentId]);
+    if (payRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Payment not found' });
     }
+
+    const { user_id, amount_received } = payRows[0];
+
+    await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
+    await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [user_id]);
+
+    const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
+    await NotificationService.notifyPaymentReceived({
+      paymentId,
+      memberId: user_id,
+      memberName: memberRow ? memberRow.name : "A member",
+      amount: amount_received,
+    });
+
     res.json({ success: true, message: 'Payment approve ho gayi!' });
   } catch (error) {
     res.status(500).json({ message: error.message });
