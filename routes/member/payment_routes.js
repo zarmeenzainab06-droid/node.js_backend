@@ -30,11 +30,27 @@ router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res
     const screenshotPath = req.file ? req.file.filename : null;
     console.log('Screenshot saved:', screenshotPath);
 
+    // Duplication Check
+    const targetMonth = membership_month || month;
+    if (targetMonth) {
+      const [existing] = await db.query(
+        `SELECT id, status FROM payments 
+         WHERE user_id = ? AND membership_month = ? AND status IN ('pending', 'paid')`,
+        [userId, targetMonth]
+      );
+      if (existing.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Payment already exists for ${targetMonth} (Status: ${existing[0].status})`
+        });
+      }
+    }
+
     const [result] = await db.query(
       `INSERT INTO payments 
         (user_id, amount_received, method, status, membership_month, screenshot, transaction_id) 
        VALUES (?, ?, ?, 'pending', ?, ?, ?)`,
-      [userId, amount, method, membership_month || month || null, screenshotPath, transaction_id || null]
+      [userId, amount, method, targetMonth || null, screenshotPath, transaction_id || null]
     );
 
     res.json({
@@ -55,7 +71,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
     const [rows] = await db.query(
-      `SELECT id, amount_received AS amount, method, status, screenshot, created_at
+      `SELECT id, amount_received AS amount, method, status, screenshot, membership_month AS month, created_at
        FROM payments WHERE user_id = ?
        ORDER BY created_at DESC`,
       [userId]
@@ -70,7 +86,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
 router.get('/pending', verifyToken, async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot,
+      `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot, p.membership_month AS month,
               p.created_at, u.name as member_name, u.email as member_email
        FROM payments p
        JOIN users u ON u.id = p.user_id

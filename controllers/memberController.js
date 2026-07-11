@@ -361,7 +361,19 @@ const freezeMembership = async (req, res) => {
     const newStatus = action === "freeze" ? "frozen" : "active";
 
     // Call model function (DB logic is separated)
-await MemberModel.updateMembershipStatus(userId, newStatus);
+    await MemberModel.updateMembershipStatus(userId, newStatus);
+
+    // Fetch member name for notification
+    const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
+    const memberName = memberRow ? memberRow.name : "Member";
+
+    // Send notifications
+    await NotificationService.notifyMembershipFrozen({
+      memberId: userId,
+      memberName,
+      action
+    });
+
     return res.status(200).json({
       success: true,
       message: `Membership ${newStatus} successfully`,

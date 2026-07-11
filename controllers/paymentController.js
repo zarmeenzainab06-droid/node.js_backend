@@ -70,6 +70,19 @@ const createPayment = async (req, res) => {
     if (!user_id)
       return res.status(400).json({ success: false, message: "user_id is required" });
 
+    // Duplication Check
+    const [existing] = await db.query(
+      `SELECT id, status FROM payments 
+       WHERE user_id = ? AND membership_month = ? AND status IN ('pending', 'paid')`,
+      [user_id, membership_month]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment already exists for this member for the month of ${membership_month} (Status: ${existing[0].status})`
+      });
+    }
+
     const screenshot = req.file ? req.file.filename : null;
 
     // ← CHANGED: no package_id / package_amount written anymore

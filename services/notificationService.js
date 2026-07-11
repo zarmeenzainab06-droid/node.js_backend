@@ -121,10 +121,41 @@ const notifyMembershipExpiring = async ({ membershipId, memberId, memberName, en
   });
 };
 
+// ── Membership frozen / unfrozen ───────────────────────────────
+const notifyMembershipFrozen = async ({ memberId, memberName, action }) => {
+  const isFreeze = action === "freeze";
+  const title = isFreeze ? "Membership Frozen" : "Membership Activated";
+  const adminMsg = isFreeze
+    ? `${memberName}'s membership has been frozen.`
+    : `${memberName}'s membership has been activated (unfrozen).`;
+  const memberMsg = isFreeze
+    ? `Your membership has been frozen. You will not be charged while frozen.`
+    : `Your membership has been reactivated. Welcome back!`;
+
+  await safeCreate({
+    role: "admin",
+    userId: null,
+    type: isFreeze ? "membership_frozen" : "membership_activated",
+    title,
+    message: adminMsg,
+    referenceId: memberId,
+  });
+
+  await safeCreate({
+    role: "user",
+    userId: memberId,
+    type: isFreeze ? "membership_frozen" : "membership_activated",
+    title,
+    message: memberMsg,
+    referenceId: memberId,
+  });
+};
+
 module.exports = {
   notifyMemberAdded,
   notifyMemberAssignedToTrainer,
   notifyMembershipRenewed,
   notifyPaymentReceived,
   notifyMembershipExpiring,
+  notifyMembershipFrozen,
 };
