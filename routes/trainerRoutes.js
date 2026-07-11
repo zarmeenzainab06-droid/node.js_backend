@@ -28,6 +28,7 @@ const {
 // Retrieve all trainers
 router.get(
   "/",
+  verifyAdmin,
   trainerController.getAllTrainers
 );
 
@@ -35,6 +36,7 @@ router.get(
 // Retrieve trainer by ID
 router.get(
   "/:id",
+  verifyAdmin,
   trainerController.getTrainerById
 );
 
@@ -42,6 +44,7 @@ router.get(
 // Create a new trainer
 router.post(
   "/",
+  verifyAdmin,
   trainerController.createTrainer
 );
 
@@ -49,6 +52,7 @@ router.post(
 // Update trainer information
 router.put(
   "/:id",
+  verifyAdmin,
   trainerController.updateTrainer
 );
 
@@ -56,6 +60,7 @@ router.put(
 // Delete trainer by ID
 router.delete(
   "/:id",
+  verifyAdmin,
   trainerController.deleteTrainer
 );
 
@@ -63,6 +68,7 @@ router.delete(
 // Retrieve all members assigned to a trainer
 router.get(
   "/:id/members",
+  verifyAdmin,
   trainerController.getTrainerMembers
 );
 

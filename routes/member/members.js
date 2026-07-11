@@ -206,9 +206,10 @@ router.put('/change-password', verifyToken, async (req, res) => {
     }
 
     // Save new password
+    const hashedPassword = await bcrypt.hash(new_password, 10);
     await db.query(
       'UPDATE users SET password = ? WHERE id = ?',
-      [new_password, userId]
+      [hashedPassword, userId]
     );
 
     console.log('Password updated successfully');

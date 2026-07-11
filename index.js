@@ -102,7 +102,7 @@ app.use("/admin/payments", paymentRoutes);
 app.use("/trainer", trainerPanelRoutes);
 app.use("/admin/slots", slotRoutes);
 app.use("/admin/reports", reportRoutes);
-app.use("/api/member", memberPortalRoutes);
+// app.use("/api/member", memberPortalRoutes);
 app.use("/notifications", notificationRoutes); // ← NEW: in-app notifications
 
 

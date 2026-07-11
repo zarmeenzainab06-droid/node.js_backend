@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Create uploads folder
-const uploadDir = path.join(__dirname, '../uploads');
+const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -25,16 +25,16 @@ const upload = multer({ storage });
 router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res) => {
   try {
     const userId = req.userId;
-    const { amount, method, membership_month, transaction_id } = req.body;
+    const { amount, method, membership_month, month, transaction_id } = req.body;
 
-    const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
+    const screenshotPath = req.file ? req.file.filename : null;
     console.log('Screenshot saved:', screenshotPath);
 
     const [result] = await db.query(
       `INSERT INTO payments 
-        (user_id, amount, method, status, membership_month, screenshot) 
-       VALUES (?, ?, ?, 'pending', ?, ?)`,
-      [userId, amount, method, membership_month, screenshotPath]
+        (user_id, amount_received, method, status, membership_month, screenshot, transaction_id) 
+       VALUES (?, ?, ?, 'pending', ?, ?, ?)`,
+      [userId, amount, method, membership_month || month || null, screenshotPath, transaction_id || null]
     );
 
     res.json({
@@ -55,7 +55,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
     const [rows] = await db.query(
-      `SELECT id, amount, method, status, screenshot, created_at
+      `SELECT id, amount_received AS amount, method, status, screenshot, created_at
        FROM payments WHERE user_id = ?
        ORDER BY created_at DESC`,
       [userId]
@@ -70,7 +70,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
 router.get('/pending', verifyToken, async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT p.id, p.amount, p.method, p.status, p.screenshot,
+      `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot,
               p.created_at, u.name as member_name, u.email as member_email
        FROM payments p
        JOIN users u ON u.id = p.user_id

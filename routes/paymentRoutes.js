@@ -61,22 +61,23 @@ const upload = multer({
 
 
 // Payment statistics route
-router.get("/stats", PaymentController.getPaymentStats);
+router.get("/stats", verifyAdmin, PaymentController.getPaymentStats);
 
 
 // FOR UPDATE STATUS seperately
-router.patch('/:id/status', PaymentController.updatePaymentStatus);
+router.patch('/:id/status', verifyAdmin, PaymentController.updatePaymentStatus);
  
 
 // Retrieve all payments
-router.get("/", PaymentController.getAllPayments);
+router.get("/", verifyAdmin, PaymentController.getAllPayments);
 
 // Retrieve payment by ID
-router.get("/:id", PaymentController.getPaymentById);
+router.get("/:id", verifyAdmin, PaymentController.getPaymentById);
 
 // Create new payment with screenshot upload
 router.post(
   "/",
+  verifyAdmin,
   upload.single("screenshot"),
   PaymentController.createPayment
 );
@@ -84,12 +85,13 @@ router.post(
 // Update payment with screenshot upload
 router.put(
   "/:id",
+  verifyAdmin,
   upload.single("screenshot"),
   PaymentController.updatePayment
 );
 
 // Delete payment by ID
-router.delete("/:id", PaymentController.deletePayment);
+router.delete("/:id", verifyAdmin, PaymentController.deletePayment);
 
 
 

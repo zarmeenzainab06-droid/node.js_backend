@@ -55,17 +55,11 @@ if (!GMAIL_REGEX.test(email)) {
   // for phne 
   const PAK_PHONE_REGEX = /^\+92\d{10}$/;
 
-if (!PAK_PHONE_REGEX.test(phone || "")) {
+if (phone && !PAK_PHONE_REGEX.test(phone)) {
   return res.status(400).json({
     success: false,
     message: "Please enter a valid Pakistani phone number."
   });
-  if (!PAK_PHONE_REGEX.test(phone)) {
-  return res.status(400).json({
-    success: false,
-    message: "Please enter a valid Pakistani phone number."
-  });
-}
 }
 
   try {

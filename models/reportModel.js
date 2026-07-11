@@ -52,11 +52,11 @@ const getPackageBreakdown = () => {
     SELECT
       pkg.id   AS package_id,
       pkg.name AS package_name,
-      COUNT(DISTINCT p.user_id) AS member_count,
-      SUM(p.amount_received)    AS revenue
+      COUNT(DISTINCT m.user_id) AS member_count,
+      SUM(COALESCE(p.amount_received, 0)) AS revenue
     FROM packages pkg
-    LEFT JOIN payments p ON p.package_id = pkg.id
-    AND (p.status = 'paid' OR p.status = 'partial')
+    LEFT JOIN memberships m ON m.package_id = pkg.id
+    LEFT JOIN payments p ON p.user_id = m.user_id AND (p.status = 'paid' OR p.status = 'partial')
     GROUP BY pkg.id, pkg.name
     ORDER BY revenue DESC
   `);

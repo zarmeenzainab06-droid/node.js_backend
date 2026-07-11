@@ -37,7 +37,7 @@ const getAll = (filters = {}) => {
       p.id,
       p.user_id,
       u.name              AS member_name,
-      cur_pkg.package_id  AS package_id,         -- ← live, from active membership
+      cur_pkg.package_id  AS package_id,         -- ← live, from latest membership
       cur_pkg.package_name,
       cur_pkg.package_amount,                     -- ← live price from packages table
       p.membership_month,
@@ -54,7 +54,12 @@ const getAll = (filters = {}) => {
       SELECT m.user_id, m.package_id, pkg.name AS package_name, pkg.price AS package_amount
       FROM memberships m
       JOIN packages pkg ON pkg.id = m.package_id
-      WHERE m.status = 'active'
+      WHERE m.id = (
+        SELECT id FROM memberships 
+        WHERE user_id = m.user_id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      )
     ) cur_pkg ON cur_pkg.user_id = p.user_id
     WHERE 1=1
   `;
@@ -100,7 +105,12 @@ const getById = (id) => {
       SELECT m.user_id, m.package_id, pkg.name AS package_name, pkg.price AS package_amount
       FROM memberships m
       JOIN packages pkg ON pkg.id = m.package_id
-      WHERE m.status = 'active'
+      WHERE m.id = (
+        SELECT id FROM memberships 
+        WHERE user_id = m.user_id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      )
     ) cur_pkg ON cur_pkg.user_id = p.user_id
     WHERE p.id = ?
   `, [id]);

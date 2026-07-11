@@ -3,6 +3,7 @@ const express = require("express");
 const router  = express.Router();
 const { verifyTrainer } = require("../middleware/auth");
 const db = require("../config/db");
+const bcrypt = require("bcrypt");
  
 // ─────────────────────────────────────────────────────────────
 // GET /trainer/stats
@@ -230,10 +231,25 @@ router.put("/change-password", verifyTrainer, async (req, res) => {
     const [[user]] = await db.query(
       `SELECT password FROM users WHERE id = ? AND role = 'trainer'`, [userId]
     );
-    if (!user || user.password !== currentPassword) {
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Trainer not found" });
+    }
+
+    const dbPassword = user.password;
+    let isMatch = false;
+
+    if (dbPassword && (dbPassword.startsWith('$2a$') || dbPassword.startsWith('$2b$'))) {
+      isMatch = await bcrypt.compare(currentPassword, dbPassword);
+    } else {
+      isMatch = currentPassword === dbPassword;
+    }
+
+    if (!isMatch) {
       return res.status(400).json({ success: false, message: "Current password is incorrect" });
     }
-    await db.query(`UPDATE users SET password = ? WHERE id = ?`, [newPassword, userId]);
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query(`UPDATE users SET password = ? WHERE id = ?`, [hashedPassword, userId]);
     res.json({ success: true, message: "Password changed successfully" });
   } catch (err) {
     console.error("Change password error:", err);

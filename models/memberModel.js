@@ -23,7 +23,7 @@ let query = `
       
      LEFT JOIN memberships m ON m.id = (
   SELECT id FROM memberships
-  WHERE user_id = u.id AND status = 'active'
+  WHERE user_id = u.id
   ORDER BY created_at DESC LIMIT 1
 )
       
