@@ -88,7 +88,7 @@ const getTrendsReport = async (req, res) => {
     const [newMembersRows] = await ReportModel.getNewMembershipsByMonth(
       monthsCount
     );
-    const [revenueRows] = await ReportModel.getRevenueTrend(monthsCount);
+    const [revenueRows] = await ReportModel.getRevenueByMonth(monthsCount);
 
     // Merge new-members + revenue per month_key so the frontend gets one
     // unified array instead of stitching two arrays itself

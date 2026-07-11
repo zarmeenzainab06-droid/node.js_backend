@@ -83,11 +83,31 @@ router.get('/membership', verifyToken, async (req, res) => {
           duration: 'N/A',
           price: '0',
           description: 'N/A',
+          pending_balance: 0,
         }
       });
     }
 
-    res.json({ membership: rows[0] });
+    // Calculate pending balance for current month
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+
+    const [paymentSum] = await db.query(`
+      SELECT SUM(amount) AS expected, SUM(amount_received) AS received 
+      FROM payments 
+      WHERE user_id = ? AND membership_month = ?
+    `, [userId, currentMonth]);
+
+    const expected = paymentSum[0] && paymentSum[0].expected ? Number(paymentSum[0].expected) : 0;
+    const received = paymentSum[0] && paymentSum[0].received ? Number(paymentSum[0].received) : 0;
+    const pendingBalance = expected > received ? (expected - received) : 0;
+
+    res.json({
+      membership: {
+        ...rows[0],
+        pending_balance: pendingBalance
+      }
+    });
 
   } catch (error) {
     console.error('Membership Error:', error.message);
