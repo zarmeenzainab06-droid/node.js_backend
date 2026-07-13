@@ -12,7 +12,31 @@ const getDashboardStats = async (req, res) => {
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     ];
-    const currentMonth = month || `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+
+    // Fetch distinct months from payments in DB
+    const [dbMonthsRows] = await db.query(
+      "SELECT DISTINCT membership_month FROM payments WHERE membership_month IS NOT NULL AND membership_month != ''"
+    );
+    const filterMonths = dbMonthsRows.map(r => r.membership_month);
+
+    // Always ensure current month is in the list
+    const systemMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+    if (!filterMonths.includes(systemMonth)) {
+      filterMonths.push(systemMonth);
+    }
+
+    // Sort months chronologically (latest first)
+    const parseMonthYear = (str) => {
+      const parts = str.split(" ");
+      if (parts.length < 2) return new Date(0);
+      const mIdx = monthNames.indexOf(parts[0]);
+      const year = parseInt(parts[1], 10);
+      return new Date(year, mIdx >= 0 ? mIdx : 0, 1);
+    };
+    filterMonths.sort((a, b) => parseMonthYear(b) - parseMonthYear(a));
+
+    // Default to the first (latest) month in the list if no month parameter is provided
+    const currentMonth = month || filterMonths[0] || systemMonth;
 
     // 1. New registered members in this month
     const [[newMembersRow]] = await db.query(
@@ -46,14 +70,6 @@ const getDashboardStats = async (req, res) => {
       [currentMonth]
     );
     const revenue = revenueRow.total ? Number(revenueRow.total) : 0;
-
-    // 5. Generate last 12 months for filter dropdown
-    const filterMonths = [];
-    const d = new Date();
-    for (let i = 0; i < 12; i++) {
-      filterMonths.push(`${monthNames[d.getMonth()]} ${d.getFullYear()}`);
-      d.setMonth(d.getMonth() - 1);
-    }
 
     return res.status(200).json({
       success: true,
