@@ -49,7 +49,7 @@ router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res
 
     // Check if expected amount is already logged for this month
     const [existingExpected] = await db.query(
-      `SELECT SUM(amount) AS total_expected FROM payments 
+      `SELECT SUM(package_amount) AS total_expected FROM payments 
        WHERE user_id = ? AND membership_month = ?`,
       [userId, targetMonth]
     );
@@ -62,14 +62,14 @@ router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res
          JOIN packages p ON p.id = m.package_id
          WHERE m.user_id = ? AND m.status = 'active'
          ORDER BY m.created_at DESC LIMIT 1`,
-        [userId]
+         [userId]
       );
       expectedAmount = mship[0]?.price || amount;
     }
 
     const [result] = await db.query(
       `INSERT INTO payments 
-        (user_id, amount, amount_received, method, status, membership_month, screenshot, transaction_id) 
+        (user_id, package_amount, amount_received, method, status, membership_month, screenshot, transaction_id) 
        VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [userId, expectedAmount, amount, method, targetMonth || null, screenshotPath, transaction_id || null]
     );
