@@ -69,6 +69,11 @@ const createTrainer = async (req, res) => {
      message: "Name and email are required" 
     }); // Validate required fields
 
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({ success: false, message: "Please enter a valid Pakistani phone number." });
+  }
+
   if (!password)
     return res.status(400).json({ 
      success: false, 
@@ -135,6 +140,11 @@ const updateTrainer = async (req, res) => {
     return res.status(400).json({ 
      success: false,
      message: "Name and email are required" }); // Validate required fields
+
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({ success: false, message: "Please enter a valid Pakistani phone number." });
+  }
 
   try {
     const [existing] = await TrainerModel.findByEmailExceptUser(email, trainerId); // Check email uniqueness excluding current trainer
