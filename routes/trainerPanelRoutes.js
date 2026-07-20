@@ -244,7 +244,7 @@ router.put("/change-password", verifyTrainer, async (req, res) => {
     const dbPassword = user.password;
     let isMatch = false;
 
-    if (dbPassword && (dbPassword.startsWith('$2a$') || dbPassword.startsWith('$2b$'))) {
+    if (dbPassword && dbPassword.startsWith('$2')) {
       isMatch = await bcrypt.compare(currentPassword, dbPassword);
     } else {
       isMatch = currentPassword === dbPassword;

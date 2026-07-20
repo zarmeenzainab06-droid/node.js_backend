@@ -253,4 +253,18 @@ router.put('/change-password', verifyToken, async (req, res) => {
   }
 });
 
+// Member - Get my check-in history
+router.get('/my-check-ins', verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const [rows] = await db.query(
+      'SELECT check_in_time FROM check_ins WHERE user_id = ? ORDER BY check_in_time DESC',
+      [userId]
+    );
+    res.json({ success: true, checkIns: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

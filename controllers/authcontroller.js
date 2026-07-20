@@ -23,7 +23,7 @@ const login = async (req, res) => {
     if (!user)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 
-    const isHashed = user.password.startsWith('$2b$') || user.password.startsWith('$2a$');
+    const isHashed = user.password && user.password.startsWith('$2');
     const match = isHashed
       ? await bcrypt.compare(password, user.password)
       : password === user.password;
