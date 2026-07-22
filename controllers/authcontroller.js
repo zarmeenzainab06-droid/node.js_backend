@@ -23,7 +23,7 @@ const login = async (req, res) => {
     if (!user)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 
-    const isHashed = user.password.startsWith('$2b$') || user.password.startsWith('$2a$');
+    const isHashed = user.password && user.password.startsWith('$2');
     const match = isHashed
       ? await bcrypt.compare(password, user.password)
       : password === user.password;
@@ -52,15 +52,15 @@ const signup = async (req, res) => {
 if (!GMAIL_REGEX.test(email)) {
     return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });
   }
-  // for phne 
-  const PAK_PHONE_REGEX = /^\+92\d{10}$/;
+  // for phone
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
 
-if (phone && !PAK_PHONE_REGEX.test(phone)) {
-  return res.status(400).json({
-    success: false,
-    message: "Please enter a valid Pakistani phone number."
-  });
-}
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter a valid Pakistani phone number."
+    });
+  }
 
   try {
     const existing = await UserModel.findByEmail(email);

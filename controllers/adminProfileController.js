@@ -40,6 +40,14 @@ const updateProfile = async (req, res) => {
     });
   }
 
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter a valid Pakistani phone number.",
+    });
+  }
+
   try {
     await AdminProfileModel.updateProfile(req.user.id, {
       name,

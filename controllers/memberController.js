@@ -75,12 +75,14 @@ const createMember = async (req, res) => {
   const { name,
      email,
      phone,
-     gender, 
-     training_slot, 
-     trainer_id, 
      password } = req.body;
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
+
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({ success: false, message: "Please enter a valid Pakistani phone number." });
+  }
 
   // for password
   if (!password)
@@ -180,6 +182,11 @@ const updateMember = async (req, res) => {
  
     if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
+
+  const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+  if (phone && !PAK_PHONE_REGEX.test(phone)) {
+    return res.status(400).json({ success: false, message: "Please enter a valid Pakistani phone number." });
+  }
 
   try {
     const existing = await MemberModel.findByEmailExceptUser

@@ -93,7 +93,7 @@ router.get('/membership', verifyToken, async (req, res) => {
     const currentMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
 
     const [paymentSum] = await db.query(`
-      SELECT SUM(amount) AS expected, SUM(amount_received) AS received 
+      SELECT SUM(package_amount) AS expected, SUM(amount_received) AS received 
       FROM payments 
       WHERE user_id = ? AND membership_month = ?
     `, [userId, currentMonth]);
@@ -163,6 +163,11 @@ router.put('/update-profile', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, phone } = req.body;
+
+    const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
+    if (phone && !PAK_PHONE_REGEX.test(phone)) {
+      return res.status(400).json({ success: false, message: "Please enter a valid Pakistani phone number." });
+    }
 
     await db.query(
       'UPDATE users SET name = ?, phone = ? WHERE id = ?',
@@ -245,6 +250,20 @@ router.put('/change-password', verifyToken, async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+});
+
+// Member - Get my check-in history
+router.get('/my-check-ins', verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const [rows] = await db.query(
+      'SELECT check_in_time FROM check_ins WHERE user_id = ? ORDER BY check_in_time DESC',
+      [userId]
+    );
+    res.json({ success: true, checkIns: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
