@@ -1,8 +1,8 @@
 const MemberModel = require("../models/memberModel");
+const NotificationService = require("../services/notificationService"); //NEW: inapp notifications
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const NotificationService = require("../services/notificationService"); // ← NEW: in-app notifications
 const db = require("../config/db"); // ← NEW: used to check for pre-existing memberships
 
 // ── Multer config ──────────────────────────────────────────────

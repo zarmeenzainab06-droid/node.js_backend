@@ -1,32 +1,17 @@
 // Import database connection pool
 const db = require("../config/db");
 
+// // Count all pending payments
+// const countPending = async () => {
 
-// Create a payment record for legacy admin functionality
-// const createPayment = async ({ userId, amount, method }) => {
-
-//   // Insert payment into database with default paid status
-//   const [result] = await db.query(
-//     `INSERT INTO payments (user_id, amount, method, status) VALUES (?, ?, ?, 'paid')`,
-//     [userId, amount, method || "cash"]
+//   // Retrieve total number of pending payments
+//   const [[{ pendingPayments }]] = await db.query(
+//     `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
 //   );
 
-//   // Return newly created payment ID
-//   return result.insertId;
+//   // Return pending payment count
+//   return pendingPayments;
 // };
-
-
-// Count all pending payments
-const countPending = async () => {
-
-  // Retrieve total number of pending payments
-  const [[{ pendingPayments }]] = await db.query(
-    `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
-  );
-
-  // Return pending payment count
-  return pendingPayments;
-};
 
 // REPLACE getAll() and getById() in paymentModel.js with these.
 // KEY CHANGE: package_name and package_amount now come from a LIVE JOIN
@@ -188,34 +173,10 @@ const getStats = () => {
     FROM payments
   `);
 };
-// ── Get member's CURRENT active package + live price ──────────────────────
-
-// const getCurrentMembershipForUser = (userId) => {
-//   return db.query(`
-//     SELECT 
-//       m.id            AS membership_id,
-//       m.package_id,
-//       pkg.name        AS package_name,
-//       pkg.price       AS package_amount,   -- ← always LIVE price, never stale
-//       m.start_date,
-//       m.end_date,
-//       m.status        AS membership_status
-//     FROM memberships m
-//     JOIN packages pkg ON pkg.id = m.package_id
-//     WHERE m.user_id = ?
-//       AND m.status = 'active'
-//     ORDER BY m.created_at DESC
-//     LIMIT 1
-//   `, [userId]);
-// };
-
 
 // Export model functions
 module.exports = {
-
-  // Legacy functions
-  // createPayment,
-  countPending,
+  // countPending,
 
   // Payment management functions
   getAll,
@@ -224,5 +185,5 @@ module.exports = {
   update,
   delete: deletePayment,
   updateStatus,// for update stats separtely
-// getCurrentMembershipForUser,
+  getStats,
 };

@@ -241,14 +241,7 @@ router.put("/change-password", verifyTrainer, async (req, res) => {
       return res.status(400).json({ success: false, message: "Trainer not found" });
     }
 
-    const dbPassword = user.password;
-    let isMatch = false;
-
-    if (dbPassword && dbPassword.startsWith('$2')) {
-      isMatch = await bcrypt.compare(currentPassword, dbPassword);
-    } else {
-      isMatch = currentPassword === dbPassword;
-    }
+       const isMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Current password is incorrect" });

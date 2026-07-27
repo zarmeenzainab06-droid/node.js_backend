@@ -18,30 +18,12 @@ const {
 } = require("../controllers/memberController");
 
 
-// Retrieve all members
 router.get("/", verifyAdmin, getAllMembers);
-
-
-// Create a new member
 router.post("/", verifyAdmin, createMember);
-
-
-// Check-in member (gate/reception)
 router.post("/check-in", verifyAdmin, checkInMember);
-
-
-// Retrieve member details by ID
 router.get("/:id", verifyAdmin, getMemberById);
-
-
-// Update member information
 router.put("/:id", verifyAdmin, updateMember);
-
-
-// Delete member by ID
 router.delete("/:id", verifyAdmin, deleteMember);
-
-//  freez status in member module
 router.patch("/:id/freeze", verifyAdmin, freezeMembership);
 
 

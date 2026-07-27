@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const UserModel = require("../models/userModel");
 const GMAIL_REGEX = /^[\w.-]+@gmail\.com$/i;
-const JWT_SECRET = "serve_ease";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 
 
@@ -23,14 +23,12 @@ const login = async (req, res) => {
     if (!user)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 
-    const isHashed = user.password && user.password.startsWith('$2');
-    const match = isHashed
-      ? await bcrypt.compare(password, user.password)
-      : password === user.password;
+        const match = await bcrypt.compare(password, user.password);// obly hash password ko compare karna hai, plain text password ko nahi
 
     if (!match)
       return res.status(200).json({ success: false, message: "Invalid email or password" });
 
+    // generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,

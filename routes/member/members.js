@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
-const { verifyToken } = require('../../middleware/auth');
+const { verifyMember } = require('../../middleware/auth');
 const bcrypt = require('bcrypt');
 
 // Get member profile with trainer and plan
-router.get('/profile', verifyToken, async (req, res) => {
+router.get('/profile', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
     console.log('Profile - User ID:', userId);
@@ -52,7 +52,7 @@ router.get('/profile', verifyToken, async (req, res) => {
 });
 
 // Get membership detail
-router.get('/membership', verifyToken, async (req, res) => {
+router.get('/membership', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -116,7 +116,7 @@ router.get('/membership', verifyToken, async (req, res) => {
 });
 
 // Get assigned trainer
-router.get('/trainer', verifyToken, async (req, res) => {
+router.get('/trainer', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -159,7 +159,7 @@ router.get('/trainer', verifyToken, async (req, res) => {
 });
 
 // Update profile
-router.put('/update-profile', verifyToken, async (req, res) => {
+router.put('/update-profile', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
     const { name, phone } = req.body;
@@ -183,7 +183,7 @@ router.put('/update-profile', verifyToken, async (req, res) => {
 });
 
 // Change password
-router.put('/change-password', verifyToken, async (req, res) => {
+router.put('/change-password', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
     const { current_password, new_password } = req.body;
@@ -204,17 +204,8 @@ router.put('/change-password', verifyToken, async (req, res) => {
     }
 
     const dbPassword = rows[0].password;
-    let isMatch = false;
-
-    // Bcrypt check
-    if (dbPassword && dbPassword.startsWith('$2')) {
-      isMatch = await bcrypt.compare(current_password, dbPassword);
-      console.log('Bcrypt match:', isMatch);
-    } else {
-      // Plain text check
-      isMatch = current_password === dbPassword;
-      console.log('Plain text match:', isMatch);
-    }
+    const isMatch = await bcrypt.compare(current_password, dbPassword);
+    console.log('Bcrypt match:', isMatch);
 
     if (!isMatch) {
       return res.status(400).json({
@@ -254,7 +245,7 @@ router.put('/change-password', verifyToken, async (req, res) => {
 });
 
 // Member - Get my check-in history
-router.get('/my-check-ins', verifyToken, async (req, res) => {
+router.get('/my-check-ins', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
     const [rows] = await db.query(

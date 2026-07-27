@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
-const {verifyToken} = require('../../middleware/auth');
+const {verifyMember} = require('../../middleware/auth');
 
 // Get all active packages for members
-router.get('/', verifyToken, async (req, res) => {
+router.get('/', verifyMember, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, name, duration, price, description FROM packages WHERE is_active = 1 ORDER BY price ASC'

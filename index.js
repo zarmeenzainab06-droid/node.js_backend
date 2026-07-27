@@ -1,4 +1,5 @@
 // Import required packages
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -16,7 +17,7 @@ const adminProfileRoutes = require("./routes/adminProfileRoutes");
 const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
 const slotRoutes = require("./routes/slotRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-const memberPortalRoutes = require("./routes/memberPortalRoutes");
+// const memberPortalRoutes = require("./routes/memberPortalRoutes");
 const notificationRoutes = require("./routes/notificationRoutes"); // ← NEW: in-app notifications
 const NotificationService = require("./services/notificationService"); // ← NEW
 
@@ -143,7 +144,7 @@ app.use("/notifications", notificationRoutes); // ← NEW: in-app notifications
 app.use("/api/members", require("./routes/member/members"));
 app.use("/api/payments", require("./routes/member/payment_routes"));
 app.use("/api/packages", require("./routes/member/memberpackageroutes"));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/diet", require("./routes/member/diet_routes"));
 // Start server
 app.listen(port, () => {

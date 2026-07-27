@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
-const { verifyToken } = require('../../middleware/auth');
+const { verifyMember } = require('../../middleware/auth');
 
 // Member - Apna diet plan dekho
-router.get('/my-plan', verifyToken, async (req, res) => {
+router.get('/my-plan', verifyMember, async (req, res) => {
   try {
     const memberId = req.userId;
 
@@ -38,7 +38,7 @@ router.get('/my-plan', verifyToken, async (req, res) => {
 });
 
 // Member - Remark add karo
-router.post('/remark', verifyToken, async (req, res) => {
+router.post('/remark', verifyMember, async (req, res) => {
   try {
     const memberId = req.userId;
     const { diet_plan_id, remark } = req.body;
@@ -56,7 +56,7 @@ router.post('/remark', verifyToken, async (req, res) => {
 });
 
 // Member - Apne remarks dekho
-router.get('/remarks/:diet_plan_id', verifyToken, async (req, res) => {
+router.get('/remarks/:diet_plan_id', verifyMember, async (req, res) => {
   try {
     const { diet_plan_id } = req.params;
 

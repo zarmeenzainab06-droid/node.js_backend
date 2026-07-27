@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/db');
-const { verifyToken } = require('../../middleware/auth');
+const { verifyMember, verifyAdmin } = require('../../middleware/auth');
 const NotificationService = require('../../services/notificationService');
 const multer = require('multer');
 const path = require('path');
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Member - Submit payment with screenshot
-router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res) => {
+router.post('/submit', verifyMember, upload.single('screenshot'), async (req, res) => {
   try {
     const userId = req.userId;
     const { amount, method, membership_month, month, transaction_id } = req.body;
@@ -88,7 +88,7 @@ router.post('/submit', verifyToken, upload.single('screenshot'), async (req, res
 });
 
 // Member - View my payments
-router.get('/my-payments', verifyToken, async (req, res) => {
+router.get('/my-payments', verifyMember, async (req, res) => {
   try {
     const userId = req.userId;
     const [rows] = await db.query(
@@ -104,7 +104,7 @@ router.get('/my-payments', verifyToken, async (req, res) => {
 });
 
 // Admin - View pending payments
-router.get('/pending', verifyToken, async (req, res) => {
+router.get('/pending', verifyAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot, p.membership_month AS month,
@@ -121,7 +121,7 @@ router.get('/pending', verifyToken, async (req, res) => {
 });
 
 // Admin - Approve payment
-router.put('/approve/:id', verifyToken, async (req, res) => {
+router.put('/approve/:id', verifyAdmin, async (req, res) => {
   try {
     const paymentId = req.params.id;
     const [payRows] = await db.query('SELECT user_id, amount_received FROM payments WHERE id = ?', [paymentId]);
@@ -149,7 +149,7 @@ router.put('/approve/:id', verifyToken, async (req, res) => {
 });
 
 // Admin - Reject payment
-router.put('/reject/:id', verifyToken, async (req, res) => {
+router.put('/reject/:id', verifyAdmin, async (req, res) => {
   try {
     const paymentId = req.params.id;
     await db.query("UPDATE payments SET status = 'failed' WHERE id = ?", [paymentId]);
