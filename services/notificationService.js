@@ -28,6 +28,18 @@ const notifyMemberAdded = async ({ memberId, memberName }) => {
   });
 };
 
+// ── Member checked in ───────────────────────────────────────────
+const notifyCheckIn = async ({ memberId, memberName }) => {
+  await safeCreate({
+    role: "member",
+    userId: memberId,
+    type: "check_in",
+    title: "Check-in logged",
+    message: `You checked in on ${new Date().toLocaleString()}.`,
+    referenceId: memberId,
+  });
+};
+
 // ── Member assigned to a trainer ────────────────────────────────
 const notifyMemberAssignedToTrainer = async ({ trainerId, memberId, memberName }) => {
   if (!trainerId) return;
@@ -158,4 +170,5 @@ module.exports = {
   notifyPaymentReceived,
   notifyMembershipExpiring,
   notifyMembershipFrozen,
+  notifyCheckIn,
 };

@@ -1,32 +1,16 @@
 // Import database connection pool
 const db = require("../config/db");
 
-// // Count all pending payments
-// const countPending = async () => {
 
-//   // Retrieve total number of pending payments
-//   const [[{ pendingPayments }]] = await db.query(
-//     `SELECT COUNT(*) AS pendingPayments FROM payments WHERE status = 'pending'`
-//   );
-
-//   // Return pending payment count
-//   return pendingPayments;
-// };
-
-// REPLACE getAll() and getById() in paymentModel.js with these.
-// KEY CHANGE: package_name and package_amount now come from a LIVE JOIN
-// with packages via the member's CURRENT active membership
-const getAll = (filters = {}) => {
+const getAll = async (filters = {}) => {
   let query = `
-    SELECT 
+    SELECT
       p.id,
       p.user_id,
-      u.name              AS member_name,
-      cur_pkg.package_id  AS package_id,         -- ← live, from latest membership
-      cur_pkg.package_name,
-      cur_pkg.package_amount,                     -- ← live price from packages table
+      u.name AS member_name,
       p.membership_month,
-      p.amount_received,                          -- ← single source of truth for paid amount
+      p.amount_received,
+      p.package_amount,
       p.method,
       p.status,
       p.screenshot,
@@ -35,21 +19,10 @@ const getAll = (filters = {}) => {
       p.created_at
     FROM payments p
     LEFT JOIN users u ON p.user_id = u.id
-    LEFT JOIN (
-      SELECT m.user_id, m.package_id, pkg.name AS package_name, pkg.price AS package_amount
-      FROM memberships m
-      JOIN packages pkg ON pkg.id = m.package_id
-      WHERE m.id = (
-        SELECT id FROM memberships 
-        WHERE user_id = m.user_id 
-        ORDER BY created_at DESC 
-        LIMIT 1
-      )
-    ) cur_pkg ON cur_pkg.user_id = p.user_id
     WHERE 1=1
   `;
   const params = [];
- 
+
   if (filters.user_id) {
     query += ' AND p.user_id = ?';
     params.push(filters.user_id);
@@ -62,56 +35,87 @@ const getAll = (filters = {}) => {
     query += ' AND p.membership_month = ?';
     params.push(filters.membership_month);
   }
- 
+
   query += ' ORDER BY p.created_at DESC';
-  return db.query(query, params);
+
+  // Step 1: get the payment rows (simple query, no subqueries)
+  const [rows] = await db.query(query, params);
+
+  // Step 2: for each payment, look up that member's current package
+  // — ONLY for package_id / package_name (display labels).
+  // package_amount is NOT overwritten here anymore — it comes straight
+  // from the stored column above, so it stays a true historical snapshot.
+  for (const row of rows) {
+    const [[pkg]] = await db.query(
+      `SELECT m.package_id, pkg.name AS package_name
+       FROM memberships m
+       JOIN packages pkg ON pkg.id = m.package_id
+       WHERE m.user_id = ?
+       ORDER BY m.created_at DESC
+       LIMIT 1`,
+      [row.user_id]
+    );
+    row.package_id = pkg ? pkg.package_id : null;
+    row.package_name = pkg ? pkg.package_name : null;
+    // row.package_amount already set from p.package_amount in the SELECT above
+  }
+
+  return [rows];
 };
- 
-const getById = (id) => {
-  return db.query(`
-    SELECT 
+
+const getById = async (id) => {
+  // Step 1: get the payment row (simple query)
+  const [rows] = await db.query(
+    `SELECT
       p.id,
       p.user_id,
       p.membership_month,
       p.amount_received,
+      p.package_amount,
       p.method,
       p.status,
       p.screenshot,
       p.payment_date,
       p.transaction_id,
       p.created_at,
-      u.name              AS member_name,
-      cur_pkg.package_id  AS package_id,
-      cur_pkg.package_name,
-      cur_pkg.package_amount
+      u.name AS member_name
     FROM payments p
     LEFT JOIN users u ON p.user_id = u.id
-    LEFT JOIN (
-      SELECT m.user_id, m.package_id, pkg.name AS package_name, pkg.price AS package_amount
-      FROM memberships m
-      JOIN packages pkg ON pkg.id = m.package_id
-      WHERE m.id = (
-        SELECT id FROM memberships 
-        WHERE user_id = m.user_id 
-        ORDER BY created_at DESC 
-        LIMIT 1
-      )
-    ) cur_pkg ON cur_pkg.user_id = p.user_id
-    WHERE p.id = ?
-  `, [id]);
+    WHERE p.id = ?`,
+    [id]
+  );
+
+  if (rows.length) {
+    // Step 2: look up that member's current package — ONLY for the label.
+    const [[pkg]] = await db.query(
+      `SELECT m.package_id, pkg.name AS package_name
+       FROM memberships m
+       JOIN packages pkg ON pkg.id = m.package_id
+       WHERE m.user_id = ?
+       ORDER BY m.created_at DESC
+       LIMIT 1`,
+      [rows[0].user_id]
+    );
+    rows[0].package_id = pkg ? pkg.package_id : null;
+    rows[0].package_name = pkg ? pkg.package_name : null;
+    // rows[0].package_amount already set from p.package_amount in the SELECT above
+  }
+
+  return [rows];
 };
 
 // Create a new payment record
 const create = (data) => {
   const query = `
     INSERT INTO payments
-      (user_id, membership_month, amount_received, method, status, screenshot, payment_date, transaction_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, membership_month, amount_received, package_amount, method, status, screenshot, payment_date, transaction_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   return db.query(query, [
     data.user_id,
     data.membership_month  || null,
     data.amount_received   || 0,
+    data.package_amount    || 0,
     data.method            || 'cash',
     data.status            || 'pending',
     data.screenshot        || null,
@@ -119,7 +123,8 @@ const create = (data) => {
     data.transaction_id    || null,
   ]);
 };
- // upd payment
+ // upd payment — package_amount deliberately NOT included here.
+ // Editing a payment must never rewrite its historical package_amount.
 const update = (id, data) => {
   const query = `
     UPDATE payments SET
@@ -176,7 +181,6 @@ const getStats = () => {
 
 // Export model functions
 module.exports = {
-  // countPending,
 
   // Payment management functions
   getAll,

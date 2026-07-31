@@ -1,8 +1,8 @@
 const MemberModel = require("../models/memberModel");
-const NotificationService = require("../services/notificationService"); //NEW: inapp notifications
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const NotificationService = require("../services/notificationService"); // ← NEW: in-app notifications
 const db = require("../config/db"); // ← NEW: used to check for pre-existing memberships
 
 // ── Multer config ──────────────────────────────────────────────
@@ -75,7 +75,10 @@ const createMember = async (req, res) => {
   const { name,
      email,
      phone,
-     password } = req.body;
+     password,
+     gender,
+     training_slot,
+     trainer_id } = req.body;
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
 
@@ -292,12 +295,20 @@ const updateMembership = async (req, res) => {
       startDate,
       endDate,
     });
+    // ← NEW: snapshot the live package price once, at the moment of this edit
+    const [[pkg]] = await db.query(
+      "SELECT price FROM packages WHERE id = ?",
+      [packageId]
+    );
+    const packageAmount = pkg ? pkg.price : 0;
 
     await MemberModel.updateLatestPayment(userId, {
       amount,
       paymentMethod,
       screenshot: screenshotPath,
       transactionId: transaction_id,
+        packageAmount,
+
     });
 
     // ── Notifications: membership renewed + payment received ──
@@ -334,30 +345,44 @@ const updateMembership = async (req, res) => {
 };
 
 
-// ── DELETE /admin/members/:id ──────────────────────────────────
-const deleteMember = async (req, res) => {
-  const userId = req.params.id;
+// ── GET /admin/members/:id/payment-count ─────────────────────────
+const getMemberPaymentCount = async (req, res) => {
   try {
-    const affected = await MemberModel.deleteMember(
-      req.params.id
-    );
-
-    if (affected === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Member not found",
-      });
-    } 
-    return res.status(200).json({ success: true, message: "Member deleted successfully" });
+    const count = await MemberModel.getPaymentCount(req.params.id);
+    return res.status(200).json({ success: true, count });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
+// ── DELETE /admin/members/:id ──────────────────────────
+const deleteMember = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const paymentCount = await MemberModel.getPaymentCount(userId);
+    if (paymentCount > 1) {
+      return res.status(409).json({
+        success: false,
+        code: 'MULTIPLE_PAYMENTS',
+        message: 'This member cannot be deleted because multiple payment records exist. Please keep the member record for payment history.',
+      });
+    }
+
+    const affected = await MemberModel.deleteMember(userId);
+    if (affected === 0) {
+      return res.status(404).json({ success: false, message: "Member not found" });
+    }
+    return res.status(200).json({ success: true, message: "Member deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 // ── POST /admin/members/:id/membership ────────────────────────
-// KEY CHANGE: passes membership_month, no longer passes package_id/amount
-// to createPayment — package data is always derived live, not stored twice.
+// UPDATED: package price is now snapshotted live at creation time and
+// stored on the payments row as package_amount, so it stays fixed even
+// if the package's price changes later.
 const assignMembership = async (req, res) => {
   const userId = req.params.id;
   const { 
@@ -401,10 +426,17 @@ const assignMembership = async (req, res) => {
     await MemberModel.expireMemberships(userId);
     await MemberModel.createMembership(userId, package_id, start_date, end_date);
  
+    // ← NEW: snapshot the chosen package's live price once, at creation time
+    const [[pkg]] = await db.query(
+      "SELECT price FROM packages WHERE id = ?",
+      [package_id]
+    );
+    const packageAmount = pkg ? pkg.price : 0;
     // ← CHANGED: only passes amount (= amount_received) and membership_month
     const [paymentResult] = await MemberModel.createPayment(
-      userId, amount, payment_method, screenshotPath, membership_month,transaction_id
-    );
+      userId, amount, payment_method, screenshotPath, membership_month,transaction_id, packageAmount
+);
+  
 
     // ── Notifications: membership assigned/renewed + payment received ──
     await NotificationService.notifyMembershipRenewed({
@@ -425,7 +457,7 @@ const assignMembership = async (req, res) => {
     console.error(err);
     return res.status(500).json({ success: false, message: err.message });
   }
-};;
+};
 
 // for stattus in member module 
 // Freeze or unfreeze membership
@@ -575,5 +607,6 @@ module.exports = {
   uploadScreenshot,
   updateMembership,
   freezeMembership,
+  getMemberPaymentCount,
   checkInMember
 };

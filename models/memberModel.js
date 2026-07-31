@@ -194,16 +194,6 @@ const createMembership = async (
   );
 };
 
-// onlu update membership no duplication
-// const updateActiveMembership = async (userId, data) => {
-//   await db.query(
-//     `UPDATE memberships
-//      SET package_id = ?, start_date = ?, end_date = ?
-//      WHERE user_id = ? AND status = 'active'`,
-//     [data.packageId, data.startDate, data.endDate, userId]
-//   );
-// };
-
 const updateActiveMembership = async (userId, data) => {
   const [rows] = await db.query(
     `
@@ -258,11 +248,11 @@ const updateLatestPayment = async (userId, data) => {
  
   if (rows.length === 0) {
     await db.query(
-      `INSERT INTO payments (user_id, amount_received, method, status, screenshot,transaction_id)
-       VALUES (?, ?, ?, 'paid', ?, ?)`,
-      [userId, data.amount, data.paymentMethod, data.screenshot,data.transactionId || null]
-    );
-    return;
+      `INSERT INTO payments (user_id, amount_received, package_amount, method, status, screenshot, transaction_id)
+     VALUES (?, ?, ?, ?, 'paid', ?, ?)`,
+    [userId, data.amount, data.packageAmount || 0, data.paymentMethod, data.screenshot, data.transactionId || null]
+  );
+  return;
   }
  
   // ← FIXED: writes to amount_received not amount
@@ -275,23 +265,14 @@ const updateLatestPayment = async (userId, data) => {
 
 // ── Create Payment ──────────────────────────────
 const createPayment = async (
-  userId,
-  amountReceived,      // ← renamed from "amount" for clarity — same value
-  payment_method,
-  screenshotPath,
-  membership_month,      // ← NEW: pass current month so it shows correctly
-    transaction_id = null   
-
+  userId, amountReceived, payment_method, screenshotPath,
+  membership_month, transaction_id = null, packageAmount = 0   // ← NEW param
 ) => {
-  // ← return the query result so callers can read insertId (e.g. for notifications)
-  return await db.query(
-    `
+  return await db.query(`
     INSERT INTO payments
-    (user_id, amount_received, method, status, screenshot, membership_month, transaction_id)
-    VALUES (?, ?, ?, 'paid', ?, ?,?)
-  `,
-    [userId, amountReceived, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]
-  );
+    (user_id, amount_received, package_amount, method, status, screenshot, membership_month, transaction_id)
+    VALUES (?, ?, ?, ?, 'paid', ?, ?, ?)
+  `, [userId, amountReceived, packageAmount, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]);
 };
 // Freeze or unfreeze membership status
 const updateMembershipStatus = async (userId, status) => {
@@ -301,6 +282,14 @@ const updateMembershipStatus = async (userId, status) => {
      WHERE user_id = ? AND status != 'expired'`,
     [status, userId]
   );
+};
+// ── Count payment records for a member ──────────────────────────
+const getPaymentCount = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT COUNT(*) AS count FROM payments WHERE user_id = ?`,
+    [userId]
+  );
+  return rows[0].count;
 };
 
 module.exports = {
@@ -316,6 +305,7 @@ module.exports = {
   createPayment,
   updateActiveMembership,
   updateLatestPayment,
-    updateMembershipStatus
+    updateMembershipStatus,
+  getPaymentCount,
 
 };

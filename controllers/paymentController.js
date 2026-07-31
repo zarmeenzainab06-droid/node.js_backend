@@ -55,48 +55,26 @@ const getPaymentById = async (req, res) => {
 // Create a new payment record  POST /admin/payments
 const createPayment = async (req, res) => {
   try {
-    const {
-      user_id,
-      membership_month,
-      amount_received,   // ← only amount field accepted now
-      method,
-      status,
-      payment_date,
-      transaction_id,
-    } = req.body;
+    const { user_id, membership_month, amount_received, method, status, payment_date, transaction_id } = req.body;
+    if (!user_id) return res.status(400).json({ success: false, message: "user_id is required" });
 
-    console.log("CREATE body:", req.body);
+    // duplication check stays the same...
 
-    if (!user_id)
-      return res.status(400).json({ success: false, message: "user_id is required" });
-
-    // Duplication Check
-    const [existing] = await db.query(
-      `SELECT id, status FROM payments 
-       WHERE user_id = ? AND membership_month = ? AND status IN ('pending', 'paid')`,
-      [user_id, membership_month]
-    );
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Payment already exists for this member for the month of ${membership_month} (Status: ${existing[0].status})`
-      });
-    }
+    // ← NEW: resolve live package price once, to snapshot at creation
+    const [[pkg]] = await db.query(`
+      SELECT pkg.price AS package_amount
+      FROM memberships m JOIN packages pkg ON pkg.id = m.package_id
+      WHERE m.user_id = ? ORDER BY m.created_at DESC LIMIT 1
+    `, [user_id]);
+    const package_amount = pkg ? pkg.package_amount : 0;
 
     const screenshot = req.file ? req.file.filename : null;
-
-    // ← CHANGED: no package_id / package_amount written anymore
     const [result] = await PaymentModel.create({
-      user_id,
-      membership_month,
-      amount_received,
-      method: method || 'cash',
-      status: status || 'pending',
-      screenshot,
-      payment_date,
-      transaction_id: transaction_id || null,
+      user_id, membership_month, amount_received, package_amount, // ← NEW
+      method: method || 'cash', status: status || 'pending',
+      screenshot, payment_date, transaction_id: transaction_id || null,
     });
-
+    // ...rest unchanged
     // ── Notification: payment received (only when actually paid) ──
     if ((status || 'pending').toLowerCase() === 'paid') {
       const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);

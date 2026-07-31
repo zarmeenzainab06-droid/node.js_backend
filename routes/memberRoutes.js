@@ -13,8 +13,8 @@ const {
   updateMembership,// for no duplication
   getMemberById,
   freezeMembership,
-  checkInMember
-  
+  checkInMember,
+  getMemberPaymentCount
 } = require("../controllers/memberController");
 
 
@@ -25,6 +25,7 @@ router.get("/:id", verifyAdmin, getMemberById);
 router.put("/:id", verifyAdmin, updateMember);
 router.delete("/:id", verifyAdmin, deleteMember);
 router.patch("/:id/freeze", verifyAdmin, freezeMembership);
+router.get("/:id/payment-count", verifyAdmin, getMemberPaymentCount);
 
 
 // Assign membership to a member

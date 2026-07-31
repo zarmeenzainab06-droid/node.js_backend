@@ -89,8 +89,6 @@ router.put(
   upload.single("screenshot"),
   PaymentController.updatePayment
 );
-
-// Delete payment by ID
 router.delete("/:id", verifyAdmin, PaymentController.deletePayment);
 
 
