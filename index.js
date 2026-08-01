@@ -9,6 +9,7 @@ const db = require("./config/db"); // ← add this
 // Import route files
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const forgotPasswordRoutes = require("./routes/forgotPasswordRoutes"); // ✅ NEW
 const memberRoutes = require("./routes/memberRoutes");
 const packageRoutes = require("./routes/packageRoutes");
 const trainerRoutes = require("./routes/trainerRoutes");
@@ -126,7 +127,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Routes 
 app.use("/", authRoutes);
 app.use("/admin", adminRoutes);
-app.use("/admin/members", memberRoutes);
+app.use("/", forgotPasswordRoutes);        // ✅ NE: /forgot-password, /reset-password, /verify-reset-tokenapp.use("/admin/members", memberRoutes);
 app.use("/admin/packages", packageRoutes);
 app.use("/admin/trainers", trainerRoutes);
 app.use("/admin/profile", adminProfileRoutes);
