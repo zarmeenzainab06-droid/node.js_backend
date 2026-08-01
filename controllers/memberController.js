@@ -597,6 +597,24 @@ const checkInMember = async (req, res) => {
   }
 };
 
+// Get today's check-ins for the reception screen
+const getTodayCheckIns = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT u.name, u.email, u.phone, ci.check_in_time
+      FROM check_ins ci
+      JOIN users u ON u.id = ci.user_id
+      WHERE DATE(ci.check_in_time) = CURDATE()
+      ORDER BY ci.check_in_time DESC
+    `);
+
+    return res.status(200).json({ success: true, checkIns: rows });
+  } catch (err) {
+    console.error("Today check-ins error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -608,5 +626,6 @@ module.exports = {
   updateMembership,
   freezeMembership,
   getMemberPaymentCount,
-  checkInMember
+  checkInMember,
+  getTodayCheckIns
 };

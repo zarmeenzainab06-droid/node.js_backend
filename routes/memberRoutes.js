@@ -14,13 +14,15 @@ const {
   getMemberById,
   freezeMembership,
   checkInMember,
-  getMemberPaymentCount
+  getMemberPaymentCount,
+  getTodayCheckIns
 } = require("../controllers/memberController");
 
 
 router.get("/", verifyAdmin, getAllMembers);
 router.post("/", verifyAdmin, createMember);
 router.post("/check-in", verifyAdmin, checkInMember);
+router.get("/check-in/today", verifyAdmin, getTodayCheckIns);
 router.get("/:id", verifyAdmin, getMemberById);
 router.put("/:id", verifyAdmin, updateMember);
 router.delete("/:id", verifyAdmin, deleteMember);
