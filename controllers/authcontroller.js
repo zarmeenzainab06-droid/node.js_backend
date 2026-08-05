@@ -21,7 +21,7 @@ const login = async (req, res) => {
     console.log("USER:", user);
 
     if (!user)
-      return res.status(200).json({ success: false, message: "Invalid email or password" });
+      return res.status(200).json({ success: false, message: "Invalid email or password2" });
 
         const match = await bcrypt.compare(password, user.password);// obly hash password ko compare karna hai, plain text password ko nahi
 
