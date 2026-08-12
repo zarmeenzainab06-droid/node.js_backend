@@ -147,6 +147,8 @@ app.use("/api/payments", require("./routes/member/payment_routes"));
 app.use("/api/packages", require("./routes/member/memberpackageroutes"));
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/diet", require("./routes/member/diet_routes"));
+app.use("/api/workout", require("./routes/member/workout_routes"));
+app.use("/api/progress", require("./routes/member/progress_routes"));
 // Start server
 app.listen(port, () => {
   console.log(`GymFitex server running on port ${port}`);

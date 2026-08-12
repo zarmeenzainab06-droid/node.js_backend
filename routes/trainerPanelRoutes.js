@@ -460,5 +460,68 @@ router.delete("/diet-plans/:id", verifyTrainer, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
- 
+
+// ─────────────────────────────────────────────────────────────
+// GET /trainer/workout-plans — list all workout plans created by trainer
+// ─────────────────────────────────────────────────────────────
+router.get("/workout-plans", verifyTrainer, async (req, res) => {
+  const trainerId = req.user.id;
+  try {
+    const [rows] = await db.query(
+      `SELECT wp.id, wp.member_id, wp.title, wp.details, wp.created_at, u.name AS member_name
+       FROM workout_plans wp
+       JOIN users u ON wp.member_id = u.id
+       WHERE wp.trainer_id = ?
+       ORDER BY wp.created_at DESC`,
+      [trainerId]
+    );
+    res.json({ success: true, plans: rows });
+  } catch (err) {
+    console.error("Get trainer workout plans error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// POST /trainer/workout-plans — create new workout plan
+// ─────────────────────────────────────────────────────────────
+router.post("/workout-plans", verifyTrainer, async (req, res) => {
+  const trainerId = req.user.id;
+  const { member_id, title, details } = req.body;
+  if (!member_id || !title || !details) {
+    return res.status(400).json({ success: false, message: "Member, title, and workout details are required" });
+  }
+  try {
+    const [[member]] = await db.query(
+      `SELECT id FROM users WHERE id = ? AND trainer_id = ? AND role = 'user'`,
+      [member_id, trainerId]
+    );
+    if (!member) return res.status(403).json({ success: false, message: "Member not assigned to you" });
+
+    const [result] = await db.query(
+      `INSERT INTO workout_plans (trainer_id, member_id, title, details) VALUES (?, ?, ?, ?)`,
+      [trainerId, member_id, title, details]
+    );
+    res.status(201).json({ success: true, message: "Workout plan created", plan_id: result.insertId });
+  } catch (err) {
+    console.error("Create workout plan error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// DELETE /trainer/workout-plans/:id — delete workout plan
+// ─────────────────────────────────────────────────────────────
+router.delete("/workout-plans/:id", verifyTrainer, async (req, res) => {
+  const trainerId = req.user.id;
+  const planId = req.params.id;
+  try {
+    await db.query(`DELETE FROM workout_plans WHERE id = ? AND trainer_id = ?`, [planId, trainerId]);
+    res.json({ success: true, message: "Workout plan deleted" });
+  } catch (err) {
+    console.error("Delete workout plan error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
