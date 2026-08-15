@@ -127,7 +127,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Routes 
 app.use("/", authRoutes);
 app.use("/admin", adminRoutes);
-app.use("/", forgotPasswordRoutes);        // ✅ NE: /forgot-password, /reset-password, /verify-reset-tokenapp.use("/admin/members", memberRoutes);
+app.use("/", forgotPasswordRoutes);        // ✅ NE: /forgot-password, /reset-password, /verify-reset-token
+app.use("/admin/members", memberRoutes);
+
 app.use("/admin/packages", packageRoutes);
 app.use("/admin/trainers", trainerRoutes);
 app.use("/admin/profile", adminProfileRoutes);

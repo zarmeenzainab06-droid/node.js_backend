@@ -76,6 +76,41 @@ const getNewMembershipsByMonth = (months = 6) => {
   `, [months]);
 };
 
+// ── Payment Methods Breakdown ────────────────────────────────────────────
+const getPaymentMethodBreakdown = () => {
+  return db.query(`
+    SELECT
+      COALESCE(NULLIF(LOWER(method), ''), 'cash') AS method,
+      COUNT(*) AS count,
+      SUM(COALESCE(amount_received, 0)) AS total_amount
+    FROM payments
+    GROUP BY method
+  `);
+};
+
+// ── Membership Status Distribution ───────────────────────────────────────
+const getMembershipStatusDistribution = () => {
+  return db.query(`
+    SELECT
+      LOWER(status) AS status,
+      COUNT(*) AS count
+    FROM memberships
+    GROUP BY LOWER(status)
+  `);
+};
+
+// ── Pending Dues Summary ──────────────────────────────────────────────────
+const getPendingDuesSummary = () => {
+  return db.query(`
+    SELECT
+      COUNT(DISTINCT user_id) AS pending_members_count,
+      SUM(COALESCE(package_amount - amount_received, 0)) AS total_pending_amount
+    FROM payments
+    WHERE status = 'pending' OR status = 'partial'
+  `);
+};
+
+
 module.exports = {
   getTotalRevenue,
   getRevenueThisMonth,
@@ -83,4 +118,7 @@ module.exports = {
   getRevenueByDateRange,
   getPackageBreakdown,
   getNewMembershipsByMonth,
+  getPaymentMethodBreakdown,
+  getMembershipStatusDistribution,
+  getPendingDuesSummary,
 };

@@ -158,6 +158,9 @@ const getReportsSummary = async (req, res) => {
     const [newMembersRows] = await ReportModel.getNewMembershipsByMonth(
       monthsCount
     );
+    const [methodRows] = await ReportModel.getPaymentMethodBreakdown();
+    const [statusRows] = await ReportModel.getMembershipStatusDistribution();
+    const [[pendingRow]] = await ReportModel.getPendingDuesSummary();
 
     const revenueByMonth = byMonthRows.map((r) => ({
       month: r.month_label,
@@ -171,6 +174,17 @@ const getReportsSummary = async (req, res) => {
       new_members: Number(r.new_members),
     }));
 
+    const paymentMethods = methodRows.map((r) => ({
+      method: r.method,
+      count: Number(r.count),
+      total_amount: Number(r.total_amount),
+    }));
+
+    const membershipStatuses = statusRows.map((r) => ({
+      status: r.status,
+      count: Number(r.count),
+    }));
+
     // average monthly revenue across the returned window
     const avgMonthly =
       revenueByMonth.length > 0
@@ -181,11 +195,15 @@ const getReportsSummary = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        total_revenue: Number(totalRow.total_revenue),
-        revenue_this_month: Number(thisMonthRow.revenue_this_month),
+        total_revenue: Number(totalRow.total_revenue || 0),
+        revenue_this_month: Number(thisMonthRow.revenue_this_month || 0),
         average_monthly_revenue: Number(avgMonthly.toFixed(2)),
+        pending_dues_amount: Number(pendingRow?.total_pending_amount || 0),
+        pending_dues_count: Number(pendingRow?.pending_members_count || 0),
         revenue_by_month: revenueByMonth,
         new_members_by_month: newMembersByMonth,
+        payment_methods: paymentMethods,
+        membership_statuses: membershipStatuses,
         packages: packageRows.map((r) => ({
           package_id: r.package_id,
           package_name: r.package_name,
@@ -194,6 +212,7 @@ const getReportsSummary = async (req, res) => {
         })),
       },
     });
+
   } catch (err) {
     console.error("getReportsSummary error:", err);
     return res.status(500).json({ success: false, message: err.message });
