@@ -64,12 +64,24 @@ const getDashboardStats = async (req, res) => {
     );
     const fullPayments = fullPaymentsRow.count;
 
-    // 4. Revenue for this month
+    // 4. Revenue & Payment stats (consistent with Reports)
     const [[revenueRow]] = await db.query(
-      "SELECT SUM(amount_received) AS total FROM payments WHERE membership_month = ? AND status IN ('paid', 'partial')",
+      `SELECT SUM(amount_received) AS total FROM payments 
+       WHERE (status IN ('paid', 'partial'))
+       AND (membership_month = ? OR (MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())))`,
       [currentMonth]
     );
     const revenue = revenueRow.total ? Number(revenueRow.total) : 0;
+
+    const [[totalRevenueRow]] = await db.query(
+      `SELECT SUM(amount_received) AS total FROM payments WHERE status IN ('paid', 'partial')`
+    );
+    const totalRevenue = totalRevenueRow.total ? Number(totalRevenueRow.total) : 0;
+
+    const [[pendingDuesRow]] = await db.query(
+      `SELECT COUNT(DISTINCT user_id) AS pending_count, SUM(COALESCE(package_amount - amount_received, 0)) AS total_pending FROM payments WHERE status IN ('pending', 'partial')`
+    );
+    const pendingDuesAmount = pendingDuesRow?.total_pending ? Number(pendingDuesRow.total_pending) : 0;
 
     return res.status(200).json({
       success: true,
@@ -82,10 +94,13 @@ const getDashboardStats = async (req, res) => {
         newMembers,
         fullPayments,
         revenue,
+        totalRevenue,
+        pendingDuesAmount,
         selectedMonth: currentMonth,
         filterMonths
       },
     });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });

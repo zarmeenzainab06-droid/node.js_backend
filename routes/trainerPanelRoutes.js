@@ -20,9 +20,10 @@ router.get("/stats", verifyTrainer, async (req, res) => {
       [trainerId]
     );
     const [[{ activeMemberships }]] = await db.query(
-      `SELECT COUNT(*) AS activeMemberships FROM memberships ms JOIN users u ON ms.user_id = u.id WHERE u.trainer_id = ? AND u.role = 'user' AND ms.status = 'active'`,
+      `SELECT COUNT(*) AS activeMemberships FROM memberships ms JOIN users u ON ms.user_id = u.id WHERE u.trainer_id = ? AND u.role = 'user' AND LOWER(ms.status) = 'active' AND (ms.end_date IS NULL OR ms.end_date >= CURDATE())`,
       [trainerId]
     );
+
     res.json({
       success: true,
       stats: {
