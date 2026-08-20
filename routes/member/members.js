@@ -59,7 +59,14 @@ router.get('/membership', verifyMember, async (req, res) => {
     const [rows] = await db.query(`
       SELECT 
         m.id,
-        m.status,
+      
+        CASE
+          WHEN m.status = 'frozen' THEN 'frozen'
+          WHEN m.end_date < CURDATE() THEN 'expired'
+          ELSE 'active'
+        END AS status,
+
+        
         m.start_date,
         m.end_date,
         p.name as package_name,

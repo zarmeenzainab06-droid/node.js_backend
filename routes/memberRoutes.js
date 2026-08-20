@@ -19,6 +19,13 @@ const {
 } = require("../controllers/memberController");
 
 
+// so membership expireion show
+const noStore = (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+};
+
+
 router.get("/", verifyAdmin, getAllMembers);
 router.post("/", verifyAdmin, createMember);
 router.post("/check-in", verifyAdmin, checkInMember);

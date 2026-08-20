@@ -131,8 +131,14 @@ router.put('/approve/:id', verifyAdmin, async (req, res) => {
 
     const { user_id, amount_received } = payRows[0];
 
-    await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
-    await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [user_id]);
+        await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
+    await db.query(`
+      UPDATE memberships
+      SET status = 'active'
+      WHERE user_id = ?
+        AND end_date >= CURDATE()
+        AND id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
+    `, [user_id, user_id]);
 
     const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
     await NotificationService.notifyPaymentReceived({

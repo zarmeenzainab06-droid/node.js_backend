@@ -14,7 +14,16 @@ let query = `
         pkg.name AS package_name,
         pkg.duration AS package_duration,
         pkg.price AS package_price,
-        m.status AS membership_status, m.end_date,
+       
+       
+        CASE
+          WHEN m.status = 'frozen' THEN 'frozen'
+          WHEN m.end_date < CURDATE() THEN 'expired'
+          ELSE 'active'
+        END AS membership_status, m.end_date,
+
+
+
         p.amount_received AS amount_received,
         p.method AS payment_method,
         p.screenshot AS payment_screenshot
@@ -38,7 +47,7 @@ let query = `
     `;
  const params = [search, search];
  if (statusFilter && statusFilter !== "all") {
-      query += ` AND m.status = ?`;
+      query += ` HAVING membership_status = ?`;
       params.push(statusFilter);
     }
 
@@ -56,7 +65,15 @@ const getMemberById = async (userId) => {
            u.trainer_id, t.name AS trainer_name,
            pkg.id AS package_id, pkg.name AS package_name,
            pkg.duration AS package_duration, pkg.price AS package_price,
-           m.status AS membership_status, m.end_date,
+
+           CASE
+             WHEN m.status = 'frozen' THEN 'frozen'
+             WHEN m.end_date < CURDATE() THEN 'expired'
+             ELSE 'active'
+           END AS membership_status, m.end_date,
+
+
+
            p.amount_received AS amount_received, p.method AS payment_method,
            p.screenshot AS payment_screenshot
     FROM users u

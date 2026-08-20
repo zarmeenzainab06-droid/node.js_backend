@@ -67,14 +67,33 @@ const createPayment = async (req, res) => {
       WHERE m.user_id = ? ORDER BY m.created_at DESC LIMIT 1
     `, [user_id]);
     const package_amount = pkg ? pkg.package_amount : 0;
-
+   
+   
+    /////// block recording more payments once this month is already fully paid.
+    // Checked by SUM, not row-existence, so partial payments still work as intended.
+    if (membership_month) {
+      const [[already]] = await db.query(
+        `SELECT COALESCE(SUM(amount_received), 0) AS total_received
+         FROM payments
+         WHERE user_id = ? AND membership_month = ? AND status != 'failed'`,
+        [user_id, membership_month]
+      );
+      const alreadyReceived = Number(already.total_received) || 0;
+      if (package_amount > 0 && alreadyReceived >= package_amount) {
+        return res.status(400).json({
+          success: false,
+          message: `This member's fee for ${membership_month} is already fully recorded (Rs. ${alreadyReceived} of Rs. ${package_amount} paid).`,
+        });
+      }
+    }
+//////////
     const screenshot = req.file ? req.file.filename : null;
     const [result] = await PaymentModel.create({
       user_id, membership_month, amount_received, package_amount, // ← NEW
       method: method || 'cash', status: status || 'pending',
       screenshot, payment_date, transaction_id: transaction_id || null,
     });
-    // ...rest unchanged
+  
     // ── Notification: payment received (only when actually paid) ──
     if ((status || 'pending').toLowerCase() === 'paid') {
       const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
