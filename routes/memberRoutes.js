@@ -8,22 +8,19 @@ const {
   createMember,
   updateMember,
   deleteMember,
-  assignMembership,
   uploadScreenshot,
-  updateMembership,// for no duplication
   getMemberById,
-  freezeMembership,
   checkInMember,
   getMemberPaymentCount,
   getTodayCheckIns
 } = require("../controllers/memberController");
 
+const {
+  assignMembership,
+  updateMembership,// for no duplication
+  freezeMembership,
+} = require("../controllers/membershipController");
 
-// so membership expireion show
-const noStore = (req, res, next) => {
-  res.set("Cache-Control", "no-store");
-  next();
-};
 
 
 router.get("/", verifyAdmin, getAllMembers);

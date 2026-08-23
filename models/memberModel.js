@@ -1,5 +1,5 @@
-const db = require ("../config/db")
-const bcrypt = require("bcrypt");   
+const db = require("../config/db")
+const bcrypt = require("bcrypt");
 
 
 // ── GET /admin/members ─────────────────────────────────────────
@@ -7,7 +7,7 @@ const getAllMembers = async (search, statusFilter) => {
 
 let query = `
       SELECT
-        u.id, u.name, u.email, u.phone, u.gender, u.training_slot, u.created_at,
+        u.id, u.name, u.email, u.phone, u.gender,u.address, u.training_slot, u.created_at,
         u.trainer_id,
         t.name AS trainer_name,
         pkg.id AS package_id,
@@ -61,7 +61,7 @@ let query = `
 const getMemberById = async (userId) => {
   const [rows] = await db.query(
     `
-    SELECT u.id, u.name, u.email, u.phone, u.gender, u.training_slot,
+    SELECT u.id, u.name, u.email, u.phone, u.gender, u.address, u.training_slot,
            u.trainer_id, t.name AS trainer_name,
            pkg.id AS package_id, pkg.name AS package_name,
            pkg.duration AS package_duration, pkg.price AS package_price,
@@ -114,9 +114,26 @@ const findByEmailExceptUser = async (email, userId) => {
 
   return rows;
 };
+
+// ── Get a user's current trainer + training slot (change-detection) ──
+const getUserTrainerAndSlot = async (userId) => {
+  const [[row]] = await db.query(
+    "SELECT trainer_id, training_slot FROM users WHERE id = ?",
+    [userId]
+  );
+  return row;
+};
+
+// ── Get a user's name (used across notifications) ───────────────
+const getUserName = async (userId) => {
+  const [[row]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
+  return row ? row.name : null;
+};
+
 // ── Create Member ───────────────────────────────
 const createMember = async ({
   name,
+  address,
   email,
   phone,
   gender,
@@ -129,11 +146,12 @@ const createMember = async ({
   const [result] = await db.query(
     `
     INSERT INTO users
-    (name, email, phone, gender, training_slot, trainer_id, password, role)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'user')
+    (name,address, email, phone, gender, training_slot, trainer_id, password, role)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'user')
   `,
     [
       name,
+     address || null,
       email,
       phone || null,
       gender || "male",
@@ -150,23 +168,23 @@ const createMember = async ({
 // PD edit mode
 const updateMember = async (
   userId,
-  { name, email, phone, gender, training_slot, trainer_id, password }
+  { name,address, email, phone, gender, training_slot, trainer_id, password }
 ) => {
   if (password && password.trim().length > 0) {
     const hashedPassword = await bcrypt.hash(password, 10);
     await db.query(
-      `UPDATE users SET name=?, email=?, phone=?, gender=?,
+      `UPDATE users SET name=?, address=?, email=?, phone=?, gender=?, 
        training_slot=?, trainer_id=?, password=?
        WHERE id=? AND role='user'`,
-      [name, email, phone||null, gender||'male',
+      [name, address||null, email, phone||null, gender||'male', 
        training_slot||'morning', trainer_id||null, hashedPassword, userId]
     );
   } else {
     await db.query(
-      `UPDATE users SET name=?, email=?, phone=?, gender=?,
+      `UPDATE users SET name=?, address=?, email=?, phone=?, gender=?,
        training_slot=?, trainer_id=?
        WHERE id=? AND role='user'`,
-      [name, email, phone||null, gender||'male',
+      [name, address||null, email, phone||null, gender||'male',
        training_slot||'morning', trainer_id||null, userId]
     );
   }
@@ -186,120 +204,6 @@ const deleteMember = async (userId) => {
   return result.affectedRows;
 };
 
-// ── Expire Memberships ──────────────────────────
-const expireMemberships = async (userId) => {
-  await db.query(
-    `UPDATE memberships SET status = 'expired' WHERE user_id = ?`,
-    [userId]
-  );
-};
-
-// ── Create Membership ───────────────────────────
-const createMembership = async (
-  userId,
-  package_id,
-  start_date,
-  end_date
-) => {
-  await db.query(
-    `
-    INSERT INTO memberships
-    (user_id, package_id, start_date, end_date, status)
-    VALUES (?, ?, ?, ?, 'active')
-  `,
-    [userId, package_id, start_date, end_date]
-  );
-};
-
-const updateActiveMembership = async (userId, data) => {
-  const [rows] = await db.query(
-    `
-    SELECT id
-    FROM memberships
-    WHERE user_id = ?
-      AND status = 'active'
-    LIMIT 1
-    `,
-    [userId]
-  );
-
-  if (rows.length === 0) {
-    await db.query(
-      `
-      INSERT INTO memberships
-      (user_id, package_id, start_date, end_date, status)
-      VALUES (?, ?, ?, ?, 'active')
-      `,
-      [
-        userId,
-        data.packageId,
-        data.startDate,
-        data.endDate,
-      ]
-    );
-    return;
-  }
-
-  await db.query(
-    `
-    UPDATE memberships
-    SET package_id = ?,
-        start_date = ?,
-        end_date = ?
-    WHERE id = ?
-    `,
-    [
-      data.packageId,
-      data.startDate,
-      data.endDate,
-      rows[0].id,
-    ]
-  );
-};
-
-const updateLatestPayment = async (userId, data) => {
-  const [rows] = await db.query(
-    `SELECT id FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
-    [userId]
-  );
- 
-  if (rows.length === 0) {
-    await db.query(
-      `INSERT INTO payments (user_id, amount_received, package_amount, method, status, screenshot, transaction_id)
-     VALUES (?, ?, ?, ?, 'paid', ?, ?)`,
-    [userId, data.amount, data.packageAmount || 0, data.paymentMethod, data.screenshot, data.transactionId || null]
-  );
-  return;
-  }
- 
-  // ← FIXED: writes to amount_received not amount
-  await db.query(
-    `UPDATE payments SET amount_received = ?, method = ?, screenshot = ?,transaction_id = ? WHERE id = ?`,
-    [data.amount, data.paymentMethod, data.screenshot,data.transactionId || null, rows[0].id]
-  );
-};
-
-
-// ── Create Payment ──────────────────────────────
-const createPayment = async (
-  userId, amountReceived, payment_method, screenshotPath,
-  membership_month, transaction_id = null, packageAmount = 0   // ← NEW param
-) => {
-  return await db.query(`
-    INSERT INTO payments
-    (user_id, amount_received, package_amount, method, status, screenshot, membership_month, transaction_id)
-    VALUES (?, ?, ?, ?, 'paid', ?, ?, ?)
-  `, [userId, amountReceived, packageAmount, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]);
-};
-// Freeze or unfreeze membership status
-const updateMembershipStatus = async (userId, status) => {
-  await db.query(
-    `UPDATE memberships 
-     SET status = ? 
-     WHERE user_id = ? AND status != 'expired'`,
-    [status, userId]
-  );
-};
 // ── Count payment records for a member ──────────────────────────
 const getPaymentCount = async (userId) => {
   const [rows] = await db.query(
@@ -309,20 +213,46 @@ const getPaymentCount = async (userId) => {
   return rows[0].count;
 };
 
+// ── Check-in: find a member by phone/email/id ────────────────────
+const findMemberForCheckIn = async (searchQuery) => {
+  const [users] = await db.query(
+    `SELECT id, name, email, phone FROM users 
+     WHERE (phone = ? OR email = ? OR id = ?) AND role = 'user' 
+     LIMIT 1`,
+    [searchQuery, searchQuery, searchQuery]
+  );
+  return users;
+};
+
+// ── Check-in: log a visit ─────────────────────────────────────────
+const logCheckIn = async (userId) => {
+  await db.query(`INSERT INTO check_ins (user_id) VALUES (?)`, [userId]);
+};
+
+// ── Check-in: today's check-ins for the reception screen ─────────
+const getTodayCheckIns = async () => {
+  const [rows] = await db.query(`
+    SELECT u.name, u.email, u.phone, ci.check_in_time
+    FROM check_ins ci
+    JOIN users u ON u.id = ci.user_id
+    WHERE DATE(ci.check_in_time) = CURDATE()
+    ORDER BY ci.check_in_time DESC
+  `);
+  return rows;
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
   findByEmail,
   findByEmailExceptUser,
+  getUserTrainerAndSlot,
+  getUserName,
   createMember,
   updateMember,
   deleteMember,
-  expireMemberships,
-  createMembership,
-  createPayment,
-  updateActiveMembership,
-  updateLatestPayment,
-    updateMembershipStatus,
   getPaymentCount,
-
+  findMemberForCheckIn,
+  logCheckIn,
+  getTodayCheckIns,
 };

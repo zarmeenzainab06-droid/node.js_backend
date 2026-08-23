@@ -1,5 +1,34 @@
 const db = require("../config/db");
 
+// ── Check a single slot's current capacity (used by member create/update) ──
+const checkSlotCapacity = async (trainingSlot) => {
+  const [[slotInfo]] = await db.query(
+    `SELECT s.name, s.capacity, COUNT(u.id) AS current_count
+     FROM slots s
+     LEFT JOIN users u ON u.training_slot = (
+       CASE s.name
+         WHEN 'Morning Batch' THEN 'morning'
+         WHEN 'Mid-Day Batch' THEN 'midday'
+         WHEN 'Evening Batch' THEN 'evening'
+         WHEN 'Night Batch'   THEN 'night'
+         ELSE LOWER(REPLACE(s.name, ' ', ''))
+       END
+     ) AND u.role = 'user'
+     WHERE (
+       CASE s.name
+         WHEN 'Morning Batch' THEN 'morning'
+         WHEN 'Mid-Day Batch' THEN 'midday'
+         WHEN 'Evening Batch' THEN 'evening'
+         WHEN 'Night Batch'   THEN 'night'
+         ELSE LOWER(REPLACE(s.name, ' ', ''))
+       END
+     ) = ?
+     GROUP BY s.id`,
+    [trainingSlot]
+  );
+  return slotInfo;
+};
+
 // ── GET all slots with member count ───────────────────────────
 const getAllSlots = async (search) => {
   const [rows] = await db.query(
@@ -99,6 +128,7 @@ const findByNameExceptId = async (name, id) => {
 };
 
 module.exports = {
+  checkSlotCapacity,
   getAllSlots, getSlotById, getSlotMembers,
   createSlot, updateSlot, deleteSlot,
   findByName, findByNameExceptId,

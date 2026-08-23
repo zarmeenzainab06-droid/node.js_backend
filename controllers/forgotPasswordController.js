@@ -7,24 +7,24 @@ const db          = require('../config/db');
 // ── Configure your Gmail SMTP ──────────────────────────────────
 // Replace with your real Gmail + App Password
 const SMTP_EMAIL    = 'gymfitex883@gmail.com';   // ← change this
-const SMTP_PASSWORD = 'gymfitex@1234567';       // ← change this (Gmail App Password)
-const APP_URL       = 'http://localhost:3000';   // ← your backend URL
+const SMTP_PASSWORD = 'slkk zuey kpvf lxlt';       // ← change this (Gmail App Password)
+const APP_URL       = 'http://gym.sandbox.pk';   // ← your backend URL
  
-// const transporter = nodemailer.createTransport({
-//   service: 'gmail',
-//   auth: {
-//     user: SMTP_EMAIL,
-//     pass: SMTP_PASSWORD,
-//   },
-// });
 const transporter = nodemailer.createTransport({
-  host: "sandbox.smtp.mailtrap.io",
-  port: 2525,
+  service: 'gmail',
   auth: {
-    user: "8e5babac1c7ad4",
-    pass: "ffe97f87769a6b"
-  }
+    user: SMTP_EMAIL,
+    pass: SMTP_PASSWORD,
+  },
 });
+// const transporter = nodemailer.createTransport({
+//   host: "sandbox.smtp.mailtrap.io",
+//   port: 2525,
+//   auth: {
+//     user: "8e5babac1c7ad4",
+//     pass: "ffe97f87769a6b"
+//   }
+// });
 
  
 // ─────────────────────────────────────────────────────────────
