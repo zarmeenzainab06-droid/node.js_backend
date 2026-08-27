@@ -158,8 +158,8 @@ const resetPassword = async (req, res) => {
     // Update password and clear token
     await db.query(
       `UPDATE users 
-       SET password = ?, reset_token = NULL, reset_token_expiry = NULL 
-       WHERE id = ?`,
+SET reset_token = ?, reset_token_expiry = DATE_ADD(NOW(), INTERVAL 1 HOUR) 
+WHERE id = ?`,
       [hashed, user.id]
     );
  
