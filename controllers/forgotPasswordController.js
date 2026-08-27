@@ -54,19 +54,27 @@ const forgotPassword = async (req, res) => {
       });
     }
  
-    // Generate secure random token
-    const token  = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    // Generate secure random token.
+    // IMPORTANT: write an explicit UTC datetime STRING (not a JS Date object).
+    // Passing a raw Date lets the mysql2 driver silently convert it using
+    // its own timezone assumption, which can differ from whatever timezone
+    // MySQL's NOW() evaluates in on your machine (exactly the mismatch that
+    // caused notifications to show wrong times). Writing an explicit UTC
+    // string removes that ambiguity — this value has a known, fixed meaning.
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiryUtcString = new Date(Date.now() + 60 * 60 * 1000)
+      .toISOString()          // e.g. "2026-08-23T13:25:51.000Z"
+      .slice(0, 19)
+      .replace('T', ' ');     // → "2026-08-23 13:25:51" (UTC, no ambiguity)
  
     // Save token to DB
     await db.query(
       `UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?`,
-      [token, expiry, user.id]
+      [token, expiryUtcString, user.id]
     );
  
-    // Build reset link — points to your Flutter web app
-    const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
- 
+    // Build reset link — points to your Flutter web app (GetX hash routing)
+const resetLink = `http://gym.sandbox.pk/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
     // Send email
     await transporter.sendMail({
       from: `"GymFitex" <${SMTP_EMAIL}>`,
@@ -121,16 +129,23 @@ const resetPassword = async (req, res) => {
   }
  
   try {
-    // Find user with matching token that hasn't expired
+    // Fetch by email + token only — do NOT filter by expiry in SQL.
+    // Comparing against MySQL's NOW() relies on the DB server's own
+    // session timezone, which can silently differ from the UTC string
+    // we wrote above. Fetching the raw value and comparing it ourselves
+    // in JS (both sides explicitly UTC) removes that ambiguity.
     const [[user]] = await db.query(
-      `SELECT id, name FROM users 
-       WHERE email = ? 
-         AND reset_token = ? 
-         AND reset_token_expiry > NOW()`,
+      `SELECT id, name, reset_token_expiry FROM users 
+       WHERE email = ? AND reset_token = ?`,
       [email.trim().toLowerCase(), token]
     );
  
-    if (!user) {
+    const isExpired =
+      !user ||
+      !user.reset_token_expiry ||
+      new Date(`${user.reset_token_expiry}Z`) < new Date();
+ 
+    if (!user || isExpired) {
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired reset link. Please request a new one.',
@@ -171,12 +186,17 @@ const verifyResetToken = async (req, res) => {
  
   try {
     const [[user]] = await db.query(
-      `SELECT id FROM users 
-       WHERE email = ? AND reset_token = ? AND reset_token_expiry > NOW()`,
+      `SELECT id, reset_token_expiry FROM users 
+       WHERE email = ? AND reset_token = ?`,
       [email.trim().toLowerCase(), token]
     );
  
-    if (!user) {
+    const isExpired =
+      !user ||
+      !user.reset_token_expiry ||
+      new Date(`${user.reset_token_expiry}Z`) < new Date();
+ 
+    if (!user || isExpired) {
       return res.status(400).json({
         success: false,
         message: 'This reset link has expired or is invalid.',
