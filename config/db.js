@@ -2,9 +2,9 @@ const mysql = require("mysql2/promise"); // Import mysql2 library with promise s
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "admin",
-  password: process.env.DB_PASSWORD || "YourStrongPassword",
-  database: process.env.DB_NAME || "gym_app",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "healthy_wealthy_db",
   dateStrings: true,
 });
 
