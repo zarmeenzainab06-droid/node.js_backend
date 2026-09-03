@@ -132,20 +132,30 @@ router.put('/approve/:id', verifyAdmin, async (req, res) => {
     const { user_id, amount_received } = payRows[0];
 
         await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
+
+    // Paid renewal extends the membership's duration instead of just
+    // flipping status — this way "active/expired" stays purely date-driven
+    // everywhere else, but a paid member's date keeps moving forward.
     await db.query(`
-      UPDATE memberships
-      SET status = 'active'
-      WHERE user_id = ?
-        AND end_date >= CURDATE()
-        AND id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
+      UPDATE memberships m
+      JOIN packages p ON p.id = m.package_id
+      SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
+          m.status = 'active'
+      WHERE m.user_id = ?
+        AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
     `, [user_id, user_id]);
 
     const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
-    await NotificationService.notifyPaymentReceived({
+    const [[updatedMembership]] = await db.query(
+      `SELECT end_date FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+      [user_id]
+    );
+    await NotificationService.notifyPaymentApprovedRenewed({
       paymentId,
       memberId: user_id,
       memberName: memberRow ? memberRow.name : "A member",
       amount: amount_received,
+      endDate: updatedMembership ? updatedMembership.end_date : null,
     });
 
     res.json({ success: true, message: 'Payment approve ho gayi!' });

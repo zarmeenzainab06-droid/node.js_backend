@@ -158,6 +158,10 @@ const getReportsSummary = async (req, res) => {
     const [newMembersRows] = await ReportModel.getNewMembershipsByMonth(
       monthsCount
     );
+    const [[pendingRow]] = await ReportModel.getPendingDues();
+    const [paymentMethodRows] = await ReportModel.getPaymentMethodBreakdown();
+    const [membershipStatusRows] =
+      await ReportModel.getMembershipStatusBreakdown();
 
     const revenueByMonth = byMonthRows.map((r) => ({
       month: r.month_label,
@@ -184,6 +188,8 @@ const getReportsSummary = async (req, res) => {
         total_revenue: Number(totalRow.total_revenue),
         revenue_this_month: Number(thisMonthRow.revenue_this_month),
         average_monthly_revenue: Number(avgMonthly.toFixed(2)),
+        pending_dues_amount: Number(pendingRow.pending_amount),
+        pending_dues_count: Number(pendingRow.pending_count),
         revenue_by_month: revenueByMonth,
         new_members_by_month: newMembersByMonth,
         packages: packageRows.map((r) => ({
@@ -191,6 +197,15 @@ const getReportsSummary = async (req, res) => {
           package_name: r.package_name,
           member_count: Number(r.member_count),
           revenue: Number(r.revenue),
+        })),
+        payment_methods: paymentMethodRows.map((r) => ({
+          method: r.method,
+          count: Number(r.count),
+          total_amount: Number(r.total_amount),
+        })),
+        membership_statuses: membershipStatusRows.map((r) => ({
+          status: r.status,
+          count: Number(r.count),
         })),
       },
     });

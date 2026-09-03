@@ -51,6 +51,25 @@ const createMembership = async (
   );
 };
 
+// ── Snapshot of current membership + latest payment, for change checks ──
+const getLatestMembershipSnapshot = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT package_id, start_date, end_date FROM memberships
+     WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+};
+
+const getLatestPaymentAmount = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT amount_received FROM payments
+     WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return rows.length ? Number(rows[0].amount_received) : null;
+};
+
 // ── Update (or create) the user's currently-active membership ───
 const updateActiveMembership = async (userId, data) => {
   const [rows] = await db.query(
@@ -196,6 +215,8 @@ module.exports = {
   getPriorMembershipCount,
   expireMemberships,
   createMembership,
+  getLatestMembershipSnapshot,
+  getLatestPaymentAmount,
   updateActiveMembership,
   getPackagePrice,
   createPayment,

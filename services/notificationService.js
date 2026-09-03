@@ -105,6 +105,27 @@ const notifyPaymentReceived = async ({ paymentId, memberId, memberName, amount }
   }
 };
 
+// ── Online payment approved + membership renewed (one combined notice) ──
+const notifyPaymentApprovedRenewed = async ({ paymentId, memberId, memberName, amount, endDate }) => {
+  await safeCreate({
+    role: "admin",
+    userId: null,
+    type: "payment_received",
+    title: "Payment approved",
+    message: `Payment of Rs. ${amount} from ${memberName} approved. Membership renewed until ${endDate}.`,
+    referenceId: paymentId,
+  });
+
+  await safeCreate({
+    role: "user",
+    userId: memberId,
+    type: "payment_received",
+    title: "Payment approved",
+    message: `Your payment of Rs. ${amount} was approved. Your membership is now valid until ${endDate}.`,
+    referenceId: paymentId,
+  });
+};
+
 // ── Membership about to expire ──────────────────────────────────
 const notifyMembershipExpiring = async ({ membershipId, memberId, memberName, endDate, daysLeft }) => {
   // Avoid sending the same expiry warning twice for the same membership
@@ -168,6 +189,7 @@ module.exports = {
   notifyMemberAssignedToTrainer,
   notifyMembershipRenewed,
   notifyPaymentReceived,
+  notifyPaymentApprovedRenewed,
   notifyMembershipExpiring,
   notifyMembershipFrozen,
   notifyCheckIn,

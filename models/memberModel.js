@@ -3,13 +3,15 @@ const bcrypt = require("bcrypt");
 
 
 // ── GET /admin/members ─────────────────────────────────────────
-const getAllMembers = async (search, statusFilter) => {
+const getAllMembers = async (search, phonePattern, statusFilter) => {
 
 let query = `
       SELECT
         u.id, u.name, u.email, u.phone, u.gender,u.address, u.training_slot, u.created_at,
+      
         u.trainer_id,
         t.name AS trainer_name,
+       
         pkg.id AS package_id,
         pkg.name AS package_name,
         pkg.duration AS package_duration,
@@ -26,8 +28,10 @@ let query = `
 
         p.amount_received AS amount_received,
         p.method AS payment_method,
+        p.transaction_id AS transaction_id,
         p.screenshot AS payment_screenshot
       FROM users u
+      
       LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'
       
      LEFT JOIN memberships m ON m.id = (
@@ -38,14 +42,16 @@ let query = `
       
       LEFT JOIN packages pkg ON pkg.id = m.package_id
       LEFT JOIN payments p ON p.id = (
-        SELECT id FROM payments
+       
+      
+      SELECT id FROM payments
         WHERE user_id = u.id
         ORDER BY created_at DESC LIMIT 1
       )
       WHERE u.role = 'user'
-        AND (u.name LIKE ? OR u.email LIKE ?)
+        AND (u.name LIKE ?${phonePattern ? " OR u.phone LIKE ?" : ""})
     `;
- const params = [search, search];
+ const params = phonePattern ? [search, phonePattern] : [search];
  if (statusFilter && statusFilter !== "all") {
       query += ` HAVING membership_status = ?`;
       params.push(statusFilter);
@@ -74,7 +80,9 @@ const getMemberById = async (userId) => {
 
 
 
-           p.amount_received AS amount_received, p.method AS payment_method,
+           p.amount_received AS amount_received,
+           p.method AS payment_method,
+           p.transaction_id AS transaction_id,
            p.screenshot AS payment_screenshot
     FROM users u
     LEFT JOIN users t ON t.id = u.trainer_id AND t.role = 'trainer'

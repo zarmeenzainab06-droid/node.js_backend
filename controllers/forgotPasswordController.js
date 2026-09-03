@@ -8,7 +8,7 @@ const db          = require('../config/db');
 // Replace with your real Gmail + App Password
 const SMTP_EMAIL    = 'gymfitex883@gmail.com';   // ← change this
 const SMTP_PASSWORD = 'slkk zuey kpvf lxlt';       // ← change this (Gmail App Password)
-const APP_URL       = 'http://gym.sandbox.pk';   // ← your backend URL
+const APP_URL       = 'http://localhost:3000';   // ← your backend URL
  
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -74,7 +74,7 @@ const forgotPassword = async (req, res) => {
     );
  
     // Build reset link — points to your Flutter web app (GetX hash routing)
-const resetLink = `http://gym.sandbox.pk/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
+const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
     // Send email
     await transporter.sendMail({
       from: `"GymFitex" <${SMTP_EMAIL}>`,
