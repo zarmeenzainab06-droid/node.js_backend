@@ -1,14 +1,10 @@
-
 // controllers/trainerController.js
-// ─────────────────────────────────────────────────────────────
 // PURPOSE: Business logic lives here.
 // Gets data from Model, processes it, sends response.
 // Think of this as the "waiter" — takes request, asks chef
 // (model) for data, then serves back the response.
-// ─────────────────────────────────────────────────────────────
  
-const TrainerModel = require('../models/trainerModel');
-const bcrypt = require('bcrypt');
+const TrainerModel = require('../models/trainerPanelModel');
  
 const TrainerController = {
  
@@ -332,7 +328,23 @@ const TrainerController = {
       res.status(500).json({ success: false, message: 'Server error' });
     }
   },
- 
+   // ── 14. Get Diet Plan Remarks ───────────────────────────────────
+  // Called when trainer expands a plan to see member feedback
+  getDietPlanRemarks: async (req, res) => {
+    try {
+      const trainerId = req.user.id;
+      const planId    = req.params.id;
+
+      const remarks = await TrainerModel.getDietPlanRemarks(planId, trainerId);
+      if (remarks === null) {
+        return res.status(404).json({ success: false, message: 'Diet plan not found' });
+      }
+      res.json({ success: true, remarks });
+    } catch (err) {
+      console.error('getDietPlanRemarks error:', err.message);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
 };
  
 // ── Helper: Convert date to "X hours ago" format ──────────────

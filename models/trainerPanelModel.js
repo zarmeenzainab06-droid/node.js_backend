@@ -1,13 +1,10 @@
 // models/trainerModel.js
-// ─────────────────────────────────────────────────────────────
 // PURPOSE: This file ONLY talks to the database.
 // All SQL queries live here. No business logic here.
 // Think of this as the "chef" — only cooks, nothing else.
-// ─────────────────────────────────────────────────────────────
  
 const db = require('../config/db');
- 
-const TrainerModel = {
+ const TrainerModel = {
  
   // ── 1. Get trainer's own profile ─────────────────────────────
   // Simple: find user by id where role is trainer
@@ -99,7 +96,6 @@ const TrainerModel = {
          u.phone,
          u.gender,
          u.training_slot,
-         u.workout_type,
          u.created_at,
          ms.status  AS membership_status,
          ms.end_date,
@@ -144,7 +140,7 @@ const TrainerModel = {
     const [rows] = await db.query(
       `SELECT
          u.id, u.name, u.email, u.phone, u.gender,
-         u.training_slot, u.workout_type, u.created_at,
+         u.training_slot, u.created_at,
          ms.status AS membership_status,
          ms.end_date,
          p.name AS plan,
@@ -180,7 +176,6 @@ const TrainerModel = {
          u.id          AS member_id,
          u.name        AS memberName,
          u.training_slot,
-         u.workout_type,
          s.start_time,
          s.end_time,
          s.schedule_days
@@ -325,16 +320,34 @@ const TrainerModel = {
  
   // ── 17. Verify member belongs to trainer ──────────────────────
   // Security check before creating/updating diet plan
-  isMemberOfTrainer: async (memberId, trainerId) => {
+    isMemberOfTrainer: async (memberId, trainerId) => {
     const [rows] = await db.query(
       `SELECT id FROM users
        WHERE id=? AND trainer_id=? AND role='user'`,
       [memberId, trainerId]
     );
-    return rows.length > 0; // true if member belongs to trainer
+    return rows.length > 0;
   },
- 
-};
- 
+
+  // ── 18. Get remarks for a diet plan (trainer view) ─────────────
+  getDietPlanRemarks: async (planId, trainerId) => {
+    const [planRows] = await db.query(
+      `SELECT id FROM diet_plans WHERE id = ? AND trainer_id = ?`,
+      [planId, trainerId]
+    );
+    if (planRows.length === 0) return null;
+
+    const [rows] = await db.query(
+      `SELECT dr.id, dr.remark, dr.created_at, u.name AS member_name
+       FROM diet_remarks dr
+       JOIN users u ON u.id = dr.member_id
+       WHERE dr.diet_plan_id = ?
+       ORDER BY dr.created_at DESC`,
+      [planId]
+    );
+    return rows;
+  },
+
+};                              // ← object closes here now, only once
+
 module.exports = TrainerModel;
- 

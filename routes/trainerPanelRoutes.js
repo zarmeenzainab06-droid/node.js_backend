@@ -37,6 +37,7 @@ router.get   ('/diet-plans/:id',   TrainerController.getDietPlanById);
 router.post  ('/diet-plans',       TrainerController.createDietPlan);
 router.put   ('/diet-plans/:id',   TrainerController.updateDietPlan);
 router.delete('/diet-plans/:id',   TrainerController.deleteDietPlan);
+router.get('/diet-plans/:id/remarks', TrainerController.getDietPlanRemarks);
  
 module.exports = router;
  
