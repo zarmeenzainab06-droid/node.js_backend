@@ -1,6 +1,7 @@
 // Import required packages
 require("dotenv").config();
 const express = require("express");
+<<<<<<< HEAD
 const cors = require("cors");
 const path = require("path");
 const cron = require('node-cron');
@@ -153,3 +154,33 @@ app.use("/api/diet", require("./routes/member/diet_routes"));
 app.listen(port, () => {
   console.log(`GymFitex server running on port ${port}`);
 });
+=======
+const cors    = require("cors");
+const app     = express();
+const port    = 3000;
+ 
+// ── CORS — allow Flutter Web on any localhost port ─────────────
+app.use(cors({
+  origin: '*',               // allow all origins (for development)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+ 
+app.use(express.json());
+ 
+// ── Serve uploaded files statically ───────────────────────────
+app.use("/uploads", express.static("uploads"));
+ 
+// ── Routes ────────────────────────────────────────────────────
+app.use("/",               require("./routes/authRoutes"));
+app.use("/admin",          require("./routes/adminRoutes"));
+app.use("/admin/members",  require("./routes/memberRoutes"));
+app.use("/admin/packages", require("./routes/packageRoutes"));
+app.use("/trainer",        require("./routes/trainerTrainerRoutes"));
+ 
+// ── Start server ───────────────────────────────────────────────
+app.listen(port, () =>
+  console.log(`✅ GymFitex server running on http://127.0.0.1:${port}`)
+);
+ 
+>>>>>>> 45bb79bc74d86fb951f176c2c2b2c2e7696c5e27
