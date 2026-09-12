@@ -91,23 +91,6 @@ const updateMembership = async (req, res) => {
       screenshotPath = req.file.filename;
     }
 
-    // Snapshot what's currently stored BEFORE overwriting, so we only
-    // notify when the admin actually changed something — not just
-    // resubmitted the same pre-filled form.
-    const before = await MembershipModel.getLatestMembershipSnapshot(userId);
-    const beforeAmount = await MembershipModel.getLatestPaymentAmount(userId);
-
-    const membershipChanged =
-      !before ||
-      String(before.package_id) !== String(packageId) ||
-      before.start_date !== startDate ||
-      before.end_date !== endDate;
-
-    const paymentChanged =
-      amount !== undefined &&
-      amount !== null &&
-      beforeAmount !== Number(amount);
-
     await MembershipModel.updateActiveMembership(userId, {
       packageId,
       startDate,
@@ -125,18 +108,16 @@ const updateMembership = async (req, res) => {
 
     });
 
-    // ── Notifications: only for what actually changed ──
+    // ── Notifications: membership renewed + payment received ──
     const memberName = (await MemberModel.getUserName(userId)) || "A member";
 
-    if (membershipChanged) {
-      await NotificationService.notifyMembershipRenewed({
-        memberId: userId,
-        memberName,
-        endDate,
-        isNew: false,
-      });
-    }
-    if (paymentChanged) {
+    await NotificationService.notifyMembershipRenewed({
+      memberId: userId,
+      memberName,
+      endDate,
+      isNew: false,
+    });
+    if (amount) {
       await NotificationService.notifyPaymentReceived({
         paymentId: null,
         memberId: userId,
@@ -172,14 +153,9 @@ const freezeMembership = async (req, res) => {
     // Call model function (DB logic is separated)
     await MembershipModel.updateMembershipStatus(userId, newStatus);
 
-    // If freezing, set freeze_until in latest membership
-    if (newStatus === "frozen") {
-      const days = parseInt(duration) || 15;
-      await MembershipModel.setFreezeUntil(userId, days);
-    } else {
-      // If unfreezing, clear freeze_until
-      await MembershipModel.clearFreezeUntil(userId);
-    }
+    // Freeze is now indefinite — only an admin unfreezing it changes the
+    // status back. Just make sure freeze_until stays cleared either way.
+    await MembershipModel.clearFreezeUntil(userId);
 
     // Fetch member name for notification
     const memberName = (await MemberModel.getUserName(userId)) || "Member";

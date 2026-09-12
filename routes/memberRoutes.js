@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { verifyAdmin } = require("../middleware/auth");
 
-// Import member controller functions
 const {
   getAllMembers,
   createMember,
@@ -10,10 +9,14 @@ const {
   deleteMember,
   uploadScreenshot,
   getMemberById,
-  checkInMember,
   getMemberPaymentCount,
-  getTodayCheckIns
 } = require("../controllers/memberController");
+
+const {
+  checkInMember,
+  getTodayCheckIns,
+  getMemberCheckInHistory,
+} = require("../controllers/checkinController");
 
 const {
   assignMembership,
@@ -27,6 +30,7 @@ router.get("/", verifyAdmin, getAllMembers);
 router.post("/", verifyAdmin, createMember);
 router.post("/check-in", verifyAdmin, checkInMember);
 router.get("/check-in/today", verifyAdmin, getTodayCheckIns);
+router.get("/:id/check-ins", verifyAdmin, getMemberCheckInHistory);
 router.get("/:id", verifyAdmin, getMemberById);
 router.put("/:id", verifyAdmin, updateMember);
 router.delete("/:id", verifyAdmin, deleteMember);

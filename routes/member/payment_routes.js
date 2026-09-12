@@ -104,75 +104,75 @@ router.get('/my-payments', verifyMember, async (req, res) => {
 });
 
 // Admin - View pending payments
-router.get('/pending', verifyAdmin, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot, p.membership_month AS month,
-              p.created_at, u.name as member_name, u.email as member_email
-       FROM payments p
-       JOIN users u ON u.id = p.user_id
-       WHERE p.status = 'pending'
-       ORDER BY p.created_at DESC`
-    );
-    res.json({ payments: rows });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// router.get('/pending', verifyAdmin, async (req, res) => {
+//   try {
+//     const [rows] = await db.query(
+//       `SELECT p.id, p.amount_received AS amount, p.method, p.status, p.screenshot, p.membership_month AS month,
+//               p.created_at, u.name as member_name, u.email as member_email
+//        FROM payments p
+//        JOIN users u ON u.id = p.user_id
+//        WHERE p.status = 'pending'
+//        ORDER BY p.created_at DESC`
+//     );
+//     res.json({ payments: rows });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
-// Admin - Approve payment
-router.put('/approve/:id', verifyAdmin, async (req, res) => {
-  try {
-    const paymentId = req.params.id;
-    const [payRows] = await db.query('SELECT user_id, amount_received FROM payments WHERE id = ?', [paymentId]);
-    if (payRows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Payment not found' });
-    }
+// // Admin - Approve payment
+// // router.put('/approve/:id', verifyAdmin, async (req, res) => {
+// //   try {
+// //     const paymentId = req.params.id;
+// //     const [payRows] = await db.query('SELECT user_id, amount_received FROM payments WHERE id = ?', [paymentId]);
+// //     if (payRows.length === 0) {
+// //       return res.status(404).json({ success: false, message: 'Payment not found' });
+// //     }
 
-    const { user_id, amount_received } = payRows[0];
+// //     const { user_id, amount_received } = payRows[0];
 
-        await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
+// //         await db.query("UPDATE payments SET status = 'paid' WHERE id = ?", [paymentId]);
 
-    // Paid renewal extends the membership's duration instead of just
-    // flipping status — this way "active/expired" stays purely date-driven
-    // everywhere else, but a paid member's date keeps moving forward.
-    await db.query(`
-      UPDATE memberships m
-      JOIN packages p ON p.id = m.package_id
-      SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
-          m.status = 'active'
-      WHERE m.user_id = ?
-        AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
-    `, [user_id, user_id]);
+//     // Paid renewal extends the membership's duration instead of just
+//     // flipping status — this way "active/expired" stays purely date-driven
+//     // everywhere else, but a paid member's date keeps moving forward.
+//     await db.query(`
+//       UPDATE memberships m
+//       JOIN packages p ON p.id = m.package_id
+//       SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
+//           m.status = 'active'
+//       WHERE m.user_id = ?
+//         AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
+//     `, [user_id, user_id]);
 
-    const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
-    const [[updatedMembership]] = await db.query(
-      `SELECT end_date FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
-      [user_id]
-    );
-    await NotificationService.notifyPaymentApprovedRenewed({
-      paymentId,
-      memberId: user_id,
-      memberName: memberRow ? memberRow.name : "A member",
-      amount: amount_received,
-      endDate: updatedMembership ? updatedMembership.end_date : null,
-    });
+//     const [[memberRow]] = await db.query("SELECT name FROM users WHERE id = ?", [user_id]);
+//     const [[updatedMembership]] = await db.query(
+//       `SELECT end_date FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+//       [user_id]
+//     );
+//     await NotificationService.notifyPaymentApprovedRenewed({
+//       paymentId,
+//       memberId: user_id,
+//       memberName: memberRow ? memberRow.name : "A member",
+//       amount: amount_received,
+//       endDate: updatedMembership ? updatedMembership.end_date : null,
+//     });
 
-    res.json({ success: true, message: 'Payment approve ho gayi!' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+//     res.json({ success: true, message: 'Payment approve ho gayi!' });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
 // Admin - Reject payment
-router.put('/reject/:id', verifyAdmin, async (req, res) => {
-  try {
-    const paymentId = req.params.id;
-    await db.query("UPDATE payments SET status = 'failed' WHERE id = ?", [paymentId]);
-    res.json({ success: true, message: 'Payment reject ho gayi!' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// router.put('/reject/:id', verifyAdmin, async (req, res) => {
+//   try {
+//     const paymentId = req.params.id;
+//     await db.query("UPDATE payments SET status = 'failed' WHERE id = ?", [paymentId]);
+//     res.json({ success: true, message: 'Payment reject ho gayi!' });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
 module.exports = router;

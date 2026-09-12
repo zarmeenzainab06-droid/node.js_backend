@@ -221,33 +221,6 @@ const getPaymentCount = async (userId) => {
   return rows[0].count;
 };
 
-// ── Check-in: find a member by phone/email/id ────────────────────
-const findMemberForCheckIn = async (searchQuery) => {
-  const [users] = await db.query(
-    `SELECT id, name, email, phone FROM users 
-     WHERE (phone = ? OR email = ? OR id = ?) AND role = 'user' 
-     LIMIT 1`,
-    [searchQuery, searchQuery, searchQuery]
-  );
-  return users;
-};
-
-// ── Check-in: log a visit ─────────────────────────────────────────
-const logCheckIn = async (userId) => {
-  await db.query(`INSERT INTO check_ins (user_id) VALUES (?)`, [userId]);
-};
-
-// ── Check-in: today's check-ins for the reception screen ─────────
-const getTodayCheckIns = async () => {
-  const [rows] = await db.query(`
-    SELECT u.name, u.email, u.phone, ci.check_in_time
-    FROM check_ins ci
-    JOIN users u ON u.id = ci.user_id
-    WHERE DATE(ci.check_in_time) = CURDATE()
-    ORDER BY ci.check_in_time DESC
-  `);
-  return rows;
-};
 
 module.exports = {
   getAllMembers,
@@ -260,7 +233,5 @@ module.exports = {
   updateMember,
   deleteMember,
   getPaymentCount,
-  findMemberForCheckIn,
-  logCheckIn,
-  getTodayCheckIns,
+  
 };

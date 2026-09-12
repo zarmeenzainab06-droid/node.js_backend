@@ -103,9 +103,15 @@ const createPayment = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: amount_received,
       });
-      // Auto-activate membership status
-      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [user_id]);
-    }
+      // for the extend memershp if payemnt received ...
+await db.query(`
+        UPDATE memberships m
+        JOIN packages p ON p.id = m.package_id
+        SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
+            m.status = 'active'
+        WHERE m.user_id = ?
+          AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
+      `, [rows[0].user_id, rows[0].user_id]);    }
 
     return res.status(201).json({
       success: true,
