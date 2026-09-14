@@ -1,12 +1,10 @@
-// Import report model for database operations
+
 const ReportModel = require("../models/reportModel");
 
-// ─────────────────────────────────────────────────────────────────────────
 // GET /admin/reports/revenue
 // Returns: total revenue, revenue this month, revenue by month (last 6),
 //          and supports optional ?start=YYYY-MM-DD&end=YYYY-MM-DD for a
 //          custom date-range revenue figure
-// ─────────────────────────────────────────────────────────────────────────
 const getRevenueReport = async (req, res) => {
   try {
     const { start, end, months } = req.query;
@@ -45,10 +43,9 @@ const getRevenueReport = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────
+
 // GET /admin/reports/membership
 // Returns: per-package member count + revenue generated
-// ─────────────────────────────────────────────────────────────────────────
 const getMembershipReport = async (req, res) => {
   try {
     const [rows] = await ReportModel.getPackageBreakdown();
@@ -75,11 +72,11 @@ const getMembershipReport = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────
+
 // GET /admin/reports/trends
 // Returns: monthly growth (new memberships), and revenue comparison between
 //          months including month-over-month % change
-// ─────────────────────────────────────────────────────────────────────────
+
 const getTrendsReport = async (req, res) => {
   try {
     const { months } = req.query;
@@ -140,12 +137,10 @@ const getTrendsReport = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────
 // GET /admin/reports/summary
 // One-shot endpoint that returns everything the Reports screen needs in a
 // single call (mirrors your existing admin dashboard pattern) — useful for
 // the initial screen load so you don't fire 3 separate requests.
-// ─────────────────────────────────────────────────────────────────────────
 const getReportsSummary = async (req, res) => {
   try {
     const { months } = req.query;

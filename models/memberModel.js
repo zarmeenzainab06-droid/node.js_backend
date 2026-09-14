@@ -19,6 +19,7 @@ let query = `
        
        
         CASE
+          WHEN m.id IS NULL THEN 'no_plan'
           WHEN m.status = 'frozen' THEN 'frozen'
           WHEN m.end_date < CURDATE() THEN 'expired'
           ELSE 'active'
@@ -73,6 +74,7 @@ const getMemberById = async (userId) => {
            pkg.duration AS package_duration, pkg.price AS package_price,
 
            CASE
+             WHEN m.id IS NULL THEN 'no_plan'
              WHEN m.status = 'frozen' THEN 'frozen'
              WHEN m.end_date < CURDATE() THEN 'expired'
              ELSE 'active'

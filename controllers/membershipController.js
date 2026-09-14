@@ -108,7 +108,7 @@ const updateMembership = async (req, res) => {
 
     });
 
-    // ── Notifications: membership renewed + payment received ──
+    // Notifications: membership renewed + payment received 
     const memberName = (await MemberModel.getUserName(userId)) || "A member";
 
     await NotificationService.notifyMembershipRenewed({
