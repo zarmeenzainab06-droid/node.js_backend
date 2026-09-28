@@ -140,29 +140,34 @@ const resetPassword = async (req, res) => {
       [email.trim().toLowerCase(), token]
     );
  
+    const expiryDate = user?.reset_token_expiry instanceof Date
+      ? user.reset_token_expiry
+      : new Date(user?.reset_token_expiry);
+
     const isExpired =
       !user ||
       !user.reset_token_expiry ||
-      new Date(`${user.reset_token_expiry}Z`) < new Date();
- 
+      isNaN(expiryDate.getTime()) ||
+      expiryDate < new Date();
+
     if (!user || isExpired) {
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired reset link. Please request a new one.',
       });
     }
- 
+
     // Hash new password
     const hashed = await bcrypt.hash(newPassword, 10);
- 
+
     // Update password and clear token
     await db.query(
       `UPDATE users 
-SET reset_token = ?, reset_token_expiry = DATE_ADD(NOW(), INTERVAL 1 HOUR) 
-WHERE id = ?`,
+       SET password = ?, reset_token = NULL, reset_token_expiry = NULL 
+       WHERE id = ?`,
       [hashed, user.id]
     );
- 
+
     return res.json({
       success: true,
       message: 'Password reset successfully! You can now login.',
@@ -191,11 +196,16 @@ const verifyResetToken = async (req, res) => {
       [email.trim().toLowerCase(), token]
     );
  
+    const expiryDate = user?.reset_token_expiry instanceof Date
+      ? user.reset_token_expiry
+      : new Date(user?.reset_token_expiry);
+
     const isExpired =
       !user ||
       !user.reset_token_expiry ||
-      new Date(`${user.reset_token_expiry}Z`) < new Date();
- 
+      isNaN(expiryDate.getTime()) ||
+      expiryDate < new Date();
+
     if (!user || isExpired) {
       return res.status(400).json({
         success: false,

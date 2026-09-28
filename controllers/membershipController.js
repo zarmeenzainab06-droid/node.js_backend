@@ -91,6 +91,23 @@ const updateMembership = async (req, res) => {
       screenshotPath = req.file.filename;
     }
 
+    // Snapshot what's currently stored BEFORE overwriting, so we only
+    // notify when the admin actually changed something — not just
+    // resubmitted the same pre-filled form.
+    const before = await MembershipModel.getLatestMembershipSnapshot(userId);
+    const beforeAmount = await MembershipModel.getLatestPaymentAmount(userId);
+
+    const membershipChanged =
+      !before ||
+      String(before.package_id) !== String(packageId) ||
+      before.start_date !== startDate ||
+      before.end_date !== endDate;
+
+    const paymentChanged =
+      amount !== undefined &&
+      amount !== null &&
+      beforeAmount !== Number(amount);
+
     await MembershipModel.updateActiveMembership(userId, {
       packageId,
       startDate,
@@ -108,16 +125,18 @@ const updateMembership = async (req, res) => {
 
     });
 
-    // ── Notifications: membership renewed + payment received ──
+    // ── Notifications: only for what actually changed ──
     const memberName = (await MemberModel.getUserName(userId)) || "A member";
 
-    await NotificationService.notifyMembershipRenewed({
-      memberId: userId,
-      memberName,
-      endDate,
-      isNew: false,
-    });
-    if (amount) {
+    if (membershipChanged) {
+      await NotificationService.notifyMembershipRenewed({
+        memberId: userId,
+        memberName,
+        endDate,
+        isNew: false,
+      });
+    }
+    if (paymentChanged) {
       await NotificationService.notifyPaymentReceived({
         paymentId: null,
         memberId: userId,

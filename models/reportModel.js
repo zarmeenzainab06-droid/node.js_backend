@@ -75,6 +75,37 @@ const getNewMembershipsByMonth = (months = 6) => {
     ORDER BY month_key ASC
   `, [months]);
 };
+const getPendingDues = () => {
+  return db.query(`
+    SELECT
+      COUNT(*) AS pending_count,
+      COALESCE(SUM(GREATEST(package_amount - amount_received, 0)), 0) AS pending_amount
+    FROM payments
+    WHERE status IN ('pending', 'partial', 'unpaid')
+  `);
+};
+
+// ── Payment method breakdown (paid + partial, same filter as revenue) ────
+const getPaymentMethodBreakdown = () => {
+  return db.query(`
+    SELECT
+      method,
+      COUNT(*) AS count,
+      SUM(amount_received) AS total_amount
+    FROM payments
+    WHERE status = 'paid' OR status = 'partial'
+    GROUP BY method
+  `);
+};
+
+// ── Membership status breakdown (active / expired / frozen) ──────────────
+const getMembershipStatusBreakdown = () => {
+  return db.query(`
+    SELECT status, COUNT(*) AS count
+    FROM memberships
+    GROUP BY status
+  `);
+};
 
 module.exports = {
   getTotalRevenue,
@@ -83,4 +114,7 @@ module.exports = {
   getRevenueByDateRange,
   getPackageBreakdown,
   getNewMembershipsByMonth,
+  getPendingDues,
+  getPaymentMethodBreakdown,
+  getMembershipStatusBreakdown,
 };

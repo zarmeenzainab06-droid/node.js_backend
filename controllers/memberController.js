@@ -39,13 +39,18 @@ const uploadScreenshot = upload.single("screenshot");
 
 // ── GET /admin/members ─────────────────────────────────────────
 const getAllMembers = async (req, res) => {
-  try {
-    const search = req.query.search ? `%${req.query.search}%` : "%";
+ try {
+  // for phne search as u know
+    const raw = req.query.search || "";
+    const namePattern = `%${raw}%`;
+    const phoneDigits = raw.replace(/\D/g, "").replace(/^0+/, "");
+    const phonePattern = phoneDigits ? `%${phoneDigits}%` : null;
     const statusFilter = req.query.status;
 
     const rows = await MemberModel.getAllMembers(
-      search,
-      statusFilter);
+      namePattern,
+      phonePattern,
+      statusFilter)
         return res.status(200).json({ success: true, members: rows });
   } catch (err) {
     console.error("FULL ERROR:", err.message);
