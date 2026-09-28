@@ -6,9 +6,8 @@ const db          = require('../config/db');
  
 // ── Configure your Gmail SMTP ──────────────────────────────────
 // Replace with your real Gmail + App Password
-const SMTP_EMAIL    = 'gymfitex883@gmail.com';   // ← change this
-const SMTP_PASSWORD = 'slkk zuey kpvf lxlt';       // ← change this (Gmail App Password)
-const APP_URL       = 'http://localhost:3000';   // ← your backend URL
+const SMTP_EMAIL    = 'gymfitex883@gmail.com';   
+const SMTP_PASSWORD = 'slkk zuey kpvf lxlt';       
  
 const transporter = nodemailer.createTransport({
   service: 'gmail',

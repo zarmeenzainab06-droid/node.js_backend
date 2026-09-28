@@ -161,30 +161,24 @@ const updateLatestPayment = async (userId, data) => {
   );
 };
 
-// ── Freeze or unfreeze membership status ──────────────────────────
+// Freeze or unfreeze membership status
 const updateMembershipStatus = async (userId, status) => {
-  await db.query(
-    `UPDATE memberships 
-     SET status = ? 
-     WHERE user_id = ? AND status != 'expired'`,
-    [status, userId]
-  );
-};
-
-const setFreezeUntil = async (userId, days) => {
-  await db.query(
-    `UPDATE memberships SET freeze_until = DATE_ADD(NOW(), INTERVAL ? DAY)
-     WHERE user_id = ? AND status = 'frozen'`,
-    [days, userId]
-  );
-};
-
-const clearFreezeUntil = async (userId) => {
-  await db.query(
-    `UPDATE memberships SET freeze_until = NULL
-     WHERE user_id = ?`,
-    [userId]
-  );
+  if (status === 'frozen') {
+    await db.query(
+      `UPDATE memberships SET status = 'frozen', frozen_at = CURDATE()
+       WHERE user_id = ? AND status = 'active'`,
+      [userId]
+    );
+  } else {
+    await db.query(
+      `UPDATE memberships
+       SET status = 'active',
+           end_date = DATE_ADD(end_date, INTERVAL IFNULL(DATEDIFF(CURDATE(), frozen_at), 0) DAY),
+           frozen_at = NULL
+       WHERE user_id = ? AND status = 'frozen'`,
+      [userId]
+    );
+  }
 };
 
 // ── Latest membership status + end date (used by member check-in gate) ─
@@ -222,8 +216,6 @@ module.exports = {
   createPayment,
   updateLatestPayment,
   updateMembershipStatus,
-  setFreezeUntil,
-  clearFreezeUntil,
   getLatestMembershipStatus,
   getCurrentMonthPaymentStatus,
 };

@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// ── Total revenue (paid + partial) ──────────────────────────────────────
+// Total revenue (paid + partial)
 const getTotalRevenue = () => {
   return db.query(`
     SELECT SUM(amount_received) AS total_revenue
@@ -9,7 +9,7 @@ const getTotalRevenue = () => {
   `);
 };
 
-// ── Revenue this month ───────────────────────────────────────────────────
+//  Revenue this month 
 const getRevenueThisMonth = () => {
   return db.query(`
     SELECT SUM(amount_received) AS revenue_this_month
@@ -20,7 +20,7 @@ const getRevenueThisMonth = () => {
   `);
 };
 
-// ── Revenue grouped by month (last N months) ─────────────────────────────
+// Revenue grouped by month (last N months)
 const getRevenueByMonth = (months = 6) => {
   return db.query(`
     SELECT
@@ -35,7 +35,7 @@ const getRevenueByMonth = (months = 6) => {
   `, [months]);
 };
 
-// ── Revenue between two dates ─────────────────────────────────────────────
+// Revenue between two dates
 const getRevenueByDateRange = (startDate, endDate) => {
   return db.query(`
     SELECT SUM(amount_received) AS revenue
@@ -46,7 +46,7 @@ const getRevenueByDateRange = (startDate, endDate) => {
   `, [startDate, endDate]);
 };
 
-// ── How many members are in each package ─────────────────────────────────
+// How many members are in each package
 const getPackageBreakdown = () => {
   return db.query(`
     SELECT
@@ -62,7 +62,7 @@ const getPackageBreakdown = () => {
   `);
 };
 
-// ── New memberships per month (last N months) ─────────────────────────────
+// New memberships per month (last N months)
 const getNewMembershipsByMonth = (months = 6) => {
   return db.query(`
     SELECT
@@ -85,7 +85,7 @@ const getPendingDues = () => {
   `);
 };
 
-// ── Payment method breakdown (paid + partial, same filter as revenue) ────
+// Payment method breakdown (paid + partial, same filter as revenue) 
 const getPaymentMethodBreakdown = () => {
   return db.query(`
     SELECT
@@ -98,7 +98,7 @@ const getPaymentMethodBreakdown = () => {
   `);
 };
 
-// ── Membership status breakdown (active / expired / frozen) ──────────────
+// Membership status breakdown (active / expired / frozen) 
 const getMembershipStatusBreakdown = () => {
   return db.query(`
     SELECT status, COUNT(*) AS count

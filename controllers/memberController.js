@@ -88,6 +88,11 @@ const createMember = async (req, res) => {
      trainer_id } = req.body;
   if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
+  // for emailll validation
+  const GMAIL_REGEX = /^[\w.-]+@gmail\.com$/i;
+  if (!GMAIL_REGEX.test(email)) {
+    return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });
+  }
 
   const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
   if (phone && !PAK_PHONE_REGEX.test(phone)) {
@@ -173,6 +178,11 @@ const updateMember = async (req, res) => {
  
     if (!name || !email)
     return res.status(400).json({ success: false, message: "Name and email are required" });
+  // for email
+    const GMAIL_REGEX = /^[\w.-]+@gmail\.com$/i;
+  if (!GMAIL_REGEX.test(email)) {
+    return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });
+  }
 
   const PAK_PHONE_REGEX = /^((\+92)|(92)|0)?3\d{9}$/;
   if (phone && !PAK_PHONE_REGEX.test(phone)) {
@@ -268,88 +278,8 @@ const deleteMember = async (req, res) => {
   }
 };
 
-const checkInMember = async (req, res) => {
-  try {
-    const { searchQuery } = req.body;
-    if (!searchQuery) {
-      return res.status(400).json({ success: false, message: "Member ID, Phone, or Email is required" });
-    }
 
-    // 1. Find user
-    const users = await MemberModel.findMemberForCheckIn(searchQuery);
-
-    if (users.length === 0) {
-      return res.status(404).json({ success: false, message: "Member not found" });
-    }
-
-    const member = users[0];
-
-    // 2. Fetch membership status
-    const memberships = await MembershipModel.getLatestMembershipStatus(member.id);
-
-    if (memberships.length === 0) {
-      return res.status(400).json({
-        success: false,
-        access: "denied",
-        memberName: member.name,
-        reason: "No membership assigned to this user"
-      });
-    }
-
-    const mship = memberships[0];
-
-    if (mship.status !== "active") {
-      return res.status(400).json({
-        success: false,
-        access: "denied",
-        memberName: member.name,
-        reason: `Membership is currently ${mship.status}`
-      });
-    }
-
-    // 3. Check payment status for current month
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const currentMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
-
-    const payments = await MembershipModel.getCurrentMonthPaymentStatus(member.id, currentMonth);
-
-    if (payments.length > 0 && payments[0].status !== "paid" && payments[0].status !== "partial") {
-      return res.status(400).json({
-        success: false,
-        access: "denied",
-        memberName: member.name,
-        reason: `Current month payment is ${payments[0].status}`
-      });
-    }
-
-    // 4. Log check-in
-    await MemberModel.logCheckIn(member.id);
-
-    return res.status(200).json({
-      success: true,
-      access: "granted",
-      memberName: member.name,
-      message: "Check-in logged successfully"
-    });
-
-  } catch (err) {
-    console.error("Check-in error:", err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// Get today's check-ins for the reception screen
-const getTodayCheckIns = async (req, res) => {
-  try {
-    const rows = await MemberModel.getTodayCheckIns();
-
-    return res.status(200).json({ success: true, checkIns: rows });
-  } catch (err) {
-    console.error("Today check-ins error:", err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
+    
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -358,6 +288,5 @@ module.exports = {
   deleteMember,
   uploadScreenshot,
   getMemberPaymentCount,
-  checkInMember,
-  getTodayCheckIns
+ 
 };

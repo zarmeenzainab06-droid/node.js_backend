@@ -361,4 +361,3 @@ function _timeAgo(date) {
 }
  
 module.exports = TrainerController;
- 
