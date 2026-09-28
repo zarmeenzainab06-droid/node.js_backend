@@ -26,11 +26,6 @@ const transporter = nodemailer.createTransport({
 // });
 
  
-// ─────────────────────────────────────────────────────────────
-// POST /forgot-password
-// Body: { email }
-// Generates reset token and sends email
-// ─────────────────────────────────────────────────────────────
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
  
@@ -53,18 +48,12 @@ const forgotPassword = async (req, res) => {
       });
     }
  
-    // Generate secure random token.
-    // IMPORTANT: write an explicit UTC datetime STRING (not a JS Date object).
-    // Passing a raw Date lets the mysql2 driver silently convert it using
-    // its own timezone assumption, which can differ from whatever timezone
-    // MySQL's NOW() evaluates in on your machine (exactly the mismatch that
-    // caused notifications to show wrong times). Writing an explicit UTC
-    // string removes that ambiguity — this value has a known, fixed meaning.
+    // Generate  secree randommm token
     const token = crypto.randomBytes(32).toString('hex');
     const expiryUtcString = new Date(Date.now() + 60 * 60 * 1000)
       .toISOString()          // e.g. "2026-08-23T13:25:51.000Z"
       .slice(0, 19)
-      .replace('T', ' ');     // → "2026-08-23 13:25:51" (UTC, no ambiguity)
+      .replace('T', ' ');     //  "2026-08-23 13:25:51" (UTC, no ambiguity)
  
     // Save token to DB
     await db.query(
@@ -73,7 +62,7 @@ const forgotPassword = async (req, res) => {
     );
  
     // Build reset link — points to your Flutter web app (GetX hash routing)
-const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
+const resetLink = `http://gym.sandbox.pk/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
     // Send email
     await transporter.sendMail({
       from: `"GymFitex" <${SMTP_EMAIL}>`,
@@ -108,11 +97,7 @@ const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${e
   }
 };
  
-// ─────────────────────────────────────────────────────────────
-// POST /reset-password
-// Body: { token, email, newPassword }
-// Verifies token and updates password
-// ─────────────────────────────────────────────────────────────
+
 const resetPassword = async (req, res) => {
   const { token, email, newPassword } = req.body;
  
@@ -128,11 +113,7 @@ const resetPassword = async (req, res) => {
   }
  
   try {
-    // Fetch by email + token only — do NOT filter by expiry in SQL.
-    // Comparing against MySQL's NOW() relies on the DB server's own
-    // session timezone, which can silently differ from the UTC string
-    // we wrote above. Fetching the raw value and comparing it ourselves
-    // in JS (both sides explicitly UTC) removes that ambiguity.
+    // Chk token validty
     const [[user]] = await db.query(
       `SELECT id, name, reset_token_expiry FROM users 
        WHERE email = ? AND reset_token = ?`,
@@ -177,10 +158,7 @@ const resetPassword = async (req, res) => {
   }
 };
  
-// ─────────────────────────────────────────────────────────────
-// GET /verify-reset-token?token=xxx&email=xxx
-// Validates token before showing reset form
-// ─────────────────────────────────────────────────────────────
+
 const verifyResetToken = async (req, res) => {
   const { token, email } = req.query;
  
