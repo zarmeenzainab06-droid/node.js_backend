@@ -15,8 +15,8 @@ const getRevenueThisMonth = () => {
     SELECT SUM(amount_received) AS revenue_this_month
     FROM payments
     WHERE (status = 'paid' OR status = 'partial')
-    AND MONTH(created_at) = MONTH(NOW())
-    AND YEAR(created_at)  = YEAR(NOW())
+        AND membership_month = DATE_FORMAT(NOW(), '%M %Y')
+
   `);
 };
 

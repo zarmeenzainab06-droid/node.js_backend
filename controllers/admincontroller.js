@@ -1,8 +1,7 @@
 const UserModel = require("../models/userModel");
 const MembershipModel = require("../models/membershipModel");
-const PaymentModel = require("../models/paymentModel");
 const ActivityModel = require("../models/activityModel");
-const db = require("../config/db");
+const DashboardModel = require("../models/dashboardModel");
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -14,10 +13,7 @@ const getDashboardStats = async (req, res) => {
     ];
 
     // Fetch distinct months from payments in DB
-    const [dbMonthsRows] = await db.query(
-      "SELECT DISTINCT membership_month FROM payments WHERE membership_month IS NOT NULL AND membership_month != ''"
-    );
-    const filterMonths = dbMonthsRows.map(r => r.membership_month);
+    const filterMonths = await DashboardModel.getDistinctPaymentMonths();
 
     // Always ensure current month is in the list
     const systemMonth = `${monthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
@@ -36,14 +32,10 @@ const getDashboardStats = async (req, res) => {
     filterMonths.sort((a, b) => parseMonthYear(b) - parseMonthYear(a));
 
     // Default to the first (latest) month in the list if no month parameter is provided
-    const currentMonth = month || filterMonths[0] || systemMonth;
+    const currentMonth = month || systemMonth;
 
     // 1. New registered members in this month
-    const [[newMembersRow]] = await db.query(
-      "SELECT COUNT(*) AS count FROM users WHERE role = 'user' AND DATE_FORMAT(created_at, '%M %Y') = ?",
-      [currentMonth]
-    );
-    const newMembers = newMembersRow.count;
+    const newMembers = await DashboardModel.countNewMembersInMonth(currentMonth);
 
     // 2. Lifetime stats
     const totalMembers = await UserModel.countTotalMembers();
@@ -52,24 +44,11 @@ const getDashboardStats = async (req, res) => {
     const expired = await MembershipModel.countExpired();
 
     // 3. Payment counts for this month
-    const [[pendingPaymentsRow]] = await db.query(
-      "SELECT COUNT(*) AS count FROM payments WHERE membership_month = ? AND status = 'pending'",
-      [currentMonth]
-    );
-    const pendingPayments = pendingPaymentsRow.count;
-
-    const [[fullPaymentsRow]] = await db.query(
-      "SELECT COUNT(*) AS count FROM payments WHERE membership_month = ? AND status = 'paid'",
-      [currentMonth]
-    );
-    const fullPayments = fullPaymentsRow.count;
+    const pendingPayments = await DashboardModel.countPendingPaymentsForMonth(currentMonth);
+    const fullPayments = await DashboardModel.countFullPaymentsForMonth(currentMonth);
 
     // 4. Revenue for this month
-    const [[revenueRow]] = await db.query(
-      "SELECT SUM(amount_received) AS total FROM payments WHERE membership_month = ? AND status IN ('paid', 'partial')",
-      [currentMonth]
-    );
-    const revenue = revenueRow.total ? Number(revenueRow.total) : 0;
+    const revenue = await DashboardModel.getRevenueForMonth(currentMonth);
 
     return res.status(200).json({
       success: true,
@@ -92,7 +71,7 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-const getRecentActivity = async (req, res) => {
+const getRecentActivity = async (_req, res) => {
   try {
     const rows = await ActivityModel.getRecentActivity();
     const activity = rows.map((r) => ({
@@ -111,4 +90,4 @@ const getRecentActivity = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getRecentActivity }; 
+module.exports = { getDashboardStats, getRecentActivity };

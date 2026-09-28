@@ -121,6 +121,37 @@ router.get('/membership', verifyMember, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// Get admin's JazzCash number, so member knows where to send payment
+router.get('/admin-payment-info', verifyMember, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT name, jazzcash_number FROM users
+       WHERE role = 'admin'
+       ORDER BY (jazzcash_number IS NOT NULL AND jazzcash_number != '') DESC, id ASC
+       LIMIT 1`
+    );
+ 
+    if (rows.length === 0 || !rows[0].jazzcash_number) {
+      return res.json({
+        payment_info: {
+          admin_name: rows[0]?.name || 'Admin',
+          jazzcash_number: null,
+        }
+      });
+    }
+ 
+    res.json({
+      payment_info: {
+        admin_name: rows[0].name,
+        jazzcash_number: rows[0].jazzcash_number,
+      }
+    });
+ 
+  } catch (error) {
+    console.error('Admin Payment Info Error:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Get assigned trainer
 router.get('/trainer', verifyMember, async (req, res) => {

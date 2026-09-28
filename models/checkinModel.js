@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// ── Find a member by phone/email/id (used at the check-in desk) ──────
+//  Find a member by phone/email/id (used at the check-in desk) 
 const findMemberForCheckIn = async (searchQuery) => {
   const [users] = await db.query(
     `SELECT id, name, email, phone FROM users 
@@ -11,12 +11,12 @@ const findMemberForCheckIn = async (searchQuery) => {
   return users;
 };
 
-// ── Log a visit ────────────────────────────────────────────────────
+//  Log a visit 
 const logCheckIn = async (userId) => {
   await db.query(`INSERT INTO check_ins (user_id) VALUES (?)`, [userId]);
 };
 
-// ── Today's check-ins for the reception screen ────────────────────
+//  Today's check-ins for the reception screen 
 const getTodayCheckIns = async () => {
   const [rows] = await db.query(`
     SELECT u.name, u.email, u.phone, ci.check_in_time
@@ -28,7 +28,7 @@ const getTodayCheckIns = async () => {
   return rows;
 };
 
-// ── Full check-in history for one specific member (member profile) ──
+//  Full check-in history for one specific member (member profile) 
 const getHistoryForMember = async (userId) => {
   const [rows] = await db.query(
     `SELECT check_in_time

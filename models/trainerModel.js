@@ -1,6 +1,6 @@
 const db = require("../config/db"); 
 
-// ── GET all trainers (with optional search) ────────────────────
+//  GET all trainers (with optional search) 
 const getAllTrainers = (search = "%") => {
   return db.query(
     `SELECT id, name, email, phone, gender,
@@ -25,7 +25,7 @@ const getTrainerById = (id) => {
   );
 };
 
-// ── Check email exists ─────────────────────────────────────────
+//  Check email exists
 const findByEmail = (email) => {
   return db.query(
     `SELECT id FROM users WHERE email = ? AND role = 'trainer'`,
@@ -40,7 +40,7 @@ const findByEmailExceptUser = (email, userId) => {
   );
 };
 
-// ── CREATE trainer ─────────────────────────────────────────────
+//  CREATE trainer
 const createTrainer = async ({
   name,
   email,
@@ -71,7 +71,7 @@ const createTrainer = async ({
   return result.insertId;
 };
 
-// ── UPDATE trainer ─────────────────────────────────────────────
+//  UPDATE trainer
 const updateTrainer = (
     id,
    { 
@@ -103,7 +103,7 @@ const updateTrainer = (
   );
 };
 
-// ── DELETE trainer ─────────────────────────────────────────────
+//  DELETE trainer
 const deleteTrainer = async (id) => {
   const [result] = await db.query(
     `DELETE FROM users WHERE id = ? AND role = 'trainer'`,
@@ -112,7 +112,7 @@ const deleteTrainer = async (id) => {
   return result.affectedRows;
 };
 
-// ── GET or retrive members assigned to trainer ───────────────────────────
+//  GET or retrive members assigned to trainer
 const getTrainerMembers = (trainerId) => {
   return db.query(
     `SELECT id, name, email, phone 

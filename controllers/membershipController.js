@@ -2,14 +2,14 @@ const MembershipModel = require("../models/membershipModel");
 const MemberModel = require("../models/memberModel");
 const NotificationService = require("../services/notificationService");
 
-// ── POST /admin/members/:id/membership ────────────────────────
+// POST /admin/members/:id/membership 
 const assignMembership = async (req, res) => {
   const userId = req.params.id;
   const { 
     package_id, 
     start_date, 
     end_date, 
-    amount,              // ← this is the amount RECEIVED from the form
+    amount,              // this is the amount RECEIVED from the form
     payment_method, 
     existing_screenshot,
     transaction_id,
@@ -42,15 +42,15 @@ const assignMembership = async (req, res) => {
     await MembershipModel.expireMemberships(userId);
     await MembershipModel.createMembership(userId, package_id, start_date, end_date);
  
-    // ← NEW: snapshot the chosen package's live price once, at creation time
+    //  snapshot the chosen package's live price once, at creation time
     const packageAmount = await MembershipModel.getPackagePrice(package_id);
-    // ← CHANGED: only passes amount (= amount_received) and membership_month
+    //  only passes amount (= amount_received) and membership_month
     const [paymentResult] = await MembershipModel.createPayment(
-      userId, amount, payment_method, screenshotPath, membership_month, transaction_id, packageAmount
+      userId, amount, payment_method, screenshotPath, membership_month, transaction_id, packageAmount, package_id
 );
   
 
-    // ── Notifications: membership assigned/renewed + payment received ──
+    //  Notifications: membership assigned/renewed + payment received 
     await NotificationService.notifyMembershipRenewed({
       memberId: userId,
       memberName,
@@ -91,15 +91,20 @@ const updateMembership = async (req, res) => {
       screenshotPath = req.file.filename;
     }
 
+    //  capture the state BEFORE the update, so we can tell if anything actually changed
+    const before = await MembershipModel.getLatestMembershipSnapshot(userId);
+    const beforeAmount = await MembershipModel.getLatestPaymentAmount(userId);
+
     await MembershipModel.updateActiveMembership(userId, {
       packageId,
       startDate,
       endDate,
     });
-    // ← NEW: snapshot the live package price once, at the moment of this edit
+    // snapshot the live package price once, at the moment of this edit
     const packageAmount = await MembershipModel.getPackagePrice(packageId);
 
     await MembershipModel.updateLatestPayment(userId, {
+      packageId,
       amount,
       paymentMethod,
       screenshot: screenshotPath,
@@ -111,13 +116,21 @@ const updateMembership = async (req, res) => {
     // Notifications: membership renewed + payment received 
     const memberName = (await MemberModel.getUserName(userId)) || "A member";
 
-    await NotificationService.notifyMembershipRenewed({
-      memberId: userId,
-      memberName,
-      endDate,
-      isNew: false,
-    });
-    if (amount) {
+    // ← CHANGED: only notify if the package or end date actually changed
+    const packageChanged = before && String(before.package_id) !== String(packageId);
+    const endDateChanged = before && String(before.end_date).slice(0, 10) !== String(endDate).slice(0, 10);
+    if (packageChanged || endDateChanged) {
+      await NotificationService.notifyMembershipRenewed({
+        memberId: userId,
+        memberName,
+        endDate,
+        isNew: false,
+      });
+    }
+
+    // CHANGED: only notify if a different amount was actually recorded
+    const amountChanged = amount && Number(amount) > 0 && Number(amount) !== Number(beforeAmount || 0);
+    if (amountChanged) {
       await NotificationService.notifyPaymentReceived({
         paymentId: null,
         memberId: userId,
@@ -155,7 +168,7 @@ const freezeMembership = async (req, res) => {
 
     // Freeze is now indefinite — only an admin unfreezing it changes the
     // status back. Just make sure freeze_until stays cleared either way.
-    await MembershipModel.clearFreezeUntil(userId);
+    // await MembershipModel.clearFreezeUntil(userId);
 
     // Fetch member name for notification
     const memberName = (await MemberModel.getUserName(userId)) || "Member";

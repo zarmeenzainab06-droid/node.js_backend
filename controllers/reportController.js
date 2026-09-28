@@ -1,10 +1,6 @@
 
 const ReportModel = require("../models/reportModel");
 
-// GET /admin/reports/revenue
-// Returns: total revenue, revenue this month, revenue by month (last 6),
-//          and supports optional ?start=YYYY-MM-DD&end=YYYY-MM-DD for a
-//          custom date-range revenue figure
 const getRevenueReport = async (req, res) => {
   try {
     const { start, end, months } = req.query;
@@ -56,8 +52,8 @@ const getMembershipReport = async (req, res) => {
       member_count: Number(r.member_count),
       revenue: Number(r.revenue),
     }));
-
-    const totalMembers = packages.reduce((sum, p) => sum + p.member_count, 0);
+//COUNTING TOTAL MEMBERS ACROSS AL PACGS
+    const totalMembers = packages.reduce((sum, p) => sum + p.member_count, 0); // REDUCE=sum vlue
 
     return res.status(200).json({
       success: true,
@@ -139,8 +135,7 @@ const getTrendsReport = async (req, res) => {
 
 // GET /admin/reports/summary
 // One-shot endpoint that returns everything the Reports screen needs in a
-// single call (mirrors your existing admin dashboard pattern) — useful for
-// the initial screen load so you don't fire 3 separate requests.
+// single call
 const getReportsSummary = async (req, res) => {
   try {
     const { months } = req.query;

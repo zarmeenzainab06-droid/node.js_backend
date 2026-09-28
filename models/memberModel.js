@@ -2,7 +2,7 @@ const db = require("../config/db")
 const bcrypt = require("bcrypt");
 
 
-// ── GET /admin/members ─────────────────────────────────────────
+//  GET /admin/members 
 const getAllMembers = async (search, phonePattern, statusFilter) => {
 
 let query = `
@@ -64,7 +64,7 @@ let query = `
     return rows;
 
 };
-// ── Get Member By ID ────────────────────────────
+//  Get Member By ID 
 const getMemberById = async (userId) => {
   const [rows] = await db.query(
     `
@@ -106,7 +106,7 @@ const getMemberById = async (userId) => {
 
   return rows;
 };
-// ── Check Email Exists ──────────────────────────
+//  Check Email Exists 
 const findByEmail = async (email) => {
   const [rows] = await db.query(
     `SELECT id FROM users WHERE email = ?`,
@@ -115,7 +115,7 @@ const findByEmail = async (email) => {
 
   return rows;
 };
-// ── Check Email Exists Except Current User ─────
+//  Check Email Exists Except Current User 
 const findByEmailExceptUser = async (email, userId) => {
   const [rows] = await db.query(
     `SELECT id FROM users WHERE email = ? AND id != ?`,
@@ -125,7 +125,7 @@ const findByEmailExceptUser = async (email, userId) => {
   return rows;
 };
 
-// ── Get a user's current trainer + training slot (change-detection) ──
+//  Get a user's current trainer + training slot (change-detection) 
 const getUserTrainerAndSlot = async (userId) => {
   const [[row]] = await db.query(
     "SELECT trainer_id, training_slot FROM users WHERE id = ?",
@@ -134,13 +134,13 @@ const getUserTrainerAndSlot = async (userId) => {
   return row;
 };
 
-// ── Get a user's name (used across notifications) ───────────────
+//  Get a user's name (used across notifications) 
 const getUserName = async (userId) => {
   const [[row]] = await db.query("SELECT name FROM users WHERE id = ?", [userId]);
   return row ? row.name : null;
 };
 
-// ── Create Member ───────────────────────────────
+//  Create Member 
 const createMember = async ({
   name,
   address,
@@ -167,7 +167,7 @@ const createMember = async ({
       gender || "male",
       training_slot || "morning",
       trainer_id || null,
-      hashedPassword,            // ← store the hash, not plain text
+      hashedPassword,            // store the hash, not plain text
     ]
   );
 
@@ -200,7 +200,7 @@ const updateMember = async (
   }
 };
 
-// ── Delete Member ───────────────────────────────
+//  Delete Member 
 const deleteMember = async (userId) => {
   await db.query(`DELETE FROM payments WHERE user_id = ?`, [userId]);
 
@@ -214,7 +214,7 @@ const deleteMember = async (userId) => {
   return result.affectedRows;
 };
 
-// ── Count payment records for a member ──────────────────────────
+//  Count payment records for a member 
 const getPaymentCount = async (userId) => {
   const [rows] = await db.query(
     `SELECT COUNT(*) AS count FROM payments WHERE user_id = ?`,

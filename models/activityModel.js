@@ -62,7 +62,9 @@ const getRecentActivity = async () => {
     memberName: ev.memberName,
     action: ev.action,
     status: ev.status,
-    hoursAgo: Math.floor((now - new Date(ev.eventTime).getTime()) / (1000 * 60 * 60)),
+    // like ye mli scds ko mnts r hours ma convrt karta 
+    hoursAgo: Math.floor((now - new Date(ev.eventTime).getTime()) / (1000 * 60 * 60)),// mth.floor= removing decimal
+     
   }));
 };
 

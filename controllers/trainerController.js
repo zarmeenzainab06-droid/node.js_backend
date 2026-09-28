@@ -1,4 +1,4 @@
-const TrainerModel = require("../models/trainerModel"); // Import trainer model for database operations
+const TrainerModel = require("../models/trainerModel"); 
 const bcrypt = require("bcrypt"); 
 
 // GET /admin/trainers

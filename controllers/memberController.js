@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const NotificationService = require("../services/notificationService"); 
 
-// ── Multer config ──────────────────────────────────────────────
+// Multer config 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads";
@@ -37,7 +37,7 @@ const upload = multer({
 // Export upload middleware for use in routes
 const uploadScreenshot = upload.single("screenshot");
 
-// ── GET /admin/members ─────────────────────────────────────────
+//  GET /admin/members 
 const getAllMembers = async (req, res) => {
  try {
   // for phne search as u know
@@ -76,7 +76,7 @@ const getMemberById = async (req, res) => {
   }
 };
 
-// ── POST /admin/members ────────────────────────────────────────
+// POST /admin/members 
 const createMember = async (req, res) => {
   const { name,
     address,
@@ -134,7 +134,7 @@ const createMember = async (req, res) => {
     password,
   });
 
-  // ── Notifications: member added (admin) + assigned trainer (if any) ──
+  //  Notifications: member added (admin) + assigned trainer (if any) 
   await NotificationService.notifyMemberAdded({ memberId: userId, memberName: name });
   if (trainer_id) {
     await NotificationService.notifyMemberAssignedToTrainer({
@@ -159,7 +159,7 @@ const createMember = async (req, res) => {
 }
 };
 
-// ── PUT /admin/members/:id ─────────────────────────────────────
+// PUT /admin/members/:id
 const updateMember = async (req, res) => {
   const userId = req.params.id;
   const { 
@@ -222,10 +222,10 @@ const updateMember = async (req, res) => {
       gender,
       training_slot,
       trainer_id, 
-      password, // ← add password
+      password, //  add password
     });
 
-    // ── Notification: member (re)assigned to a trainer ──
+    //  Notification: member (re)assigned to a trainer 
     if (trainerChanged) {
       await NotificationService.notifyMemberAssignedToTrainer({
         trainerId: trainer_id,
@@ -243,7 +243,7 @@ const updateMember = async (req, res) => {
 };
 
 
-// ── GET /admin/members/:id/payment-count ─────────────────────────
+// GET /admin/members/:id/payment-count 
 const getMemberPaymentCount = async (req, res) => {
   try {
     const count = await MemberModel.getPaymentCount(req.params.id);
@@ -254,7 +254,7 @@ const getMemberPaymentCount = async (req, res) => {
   }
 };
 
-// ── DELETE /admin/members/:id ──────────────────────────
+//  DELETE /admin/members/:id 
 const deleteMember = async (req, res) => {
   const userId = req.params.id;
   try {

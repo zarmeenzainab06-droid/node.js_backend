@@ -59,7 +59,7 @@ router.post(
   },
   assignMembership
 );
-// for the UPDATE MEMBERSHIP only no duplicate
+// for the UPDATE MEMBERSHIP only no duplicateeeeS
 router.put(
   "/:id/membership",
   verifyAdmin,

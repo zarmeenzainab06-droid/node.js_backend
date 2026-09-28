@@ -15,7 +15,7 @@ const createUser = async ({ name, phone, gender, email, password }) => {
 };
 
 
-// ── Stats ─────────────────────────────────────────────────────
+// Stats 
 const countTotalMembers = async () => {
   const [[{ totalMembers }]] = await db.query(
     `SELECT COUNT(*) AS totalMembers FROM users WHERE role = 'user'`

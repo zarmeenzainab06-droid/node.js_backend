@@ -12,7 +12,7 @@ const {
 
 router.get("/",           verifyAdmin, getAllPackages);
 router.get("/:id",        verifyAdmin, getPackageById);
-router.get("/:id/slots",  verifyAdmin, getPackageSlots);  // ← new: slots for a package
+router.get("/:id/slots",  verifyAdmin, getPackageSlots);  
 router.post("/",          verifyAdmin, createPackage);
 router.put("/:id",        verifyAdmin, updatePackage);
 router.delete("/:id",     verifyAdmin, deletePackage);

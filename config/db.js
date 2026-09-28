@@ -1,4 +1,4 @@
-const mysql = require("mysql2/promise"); // Import mysql2 library with promise support for async database operations
+const mysql = require("mysql2/promise"); 
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
@@ -8,4 +8,4 @@ const db = mysql.createPool({
   dateStrings: true,
 });
 
-module.exports = db; // Export the database pool so it can be used in other files of the project
+module.exports = db; 

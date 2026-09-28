@@ -108,12 +108,13 @@ const getById = async (id) => {
 const create = (data) => {
   const query = `
     INSERT INTO payments
-      (user_id, membership_month, amount_received, package_amount, method, status, screenshot, payment_date, transaction_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (user_id, package_id, membership_month, amount_received, package_amount, method, status, screenshot, payment_date, transaction_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   return db.query(query, [
     data.user_id,
-    data.membership_month  || null,
+    data.package_id || null,
+    data.membership_month || null,
     data.amount_received   || 0,
     data.package_amount    || 0,
     data.method            || 'cash',

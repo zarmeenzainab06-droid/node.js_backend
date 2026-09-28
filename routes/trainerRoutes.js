@@ -1,28 +1,8 @@
-// Import Express framework
+
 const express = require("express");
-
-// Create router instance
 const router = express.Router();
-
-
-
-// Import trainer controller
 const trainerController = require("../controllers/trainerController");
-
-
-// Import authentication middleware
 const { verifyAdmin } = require("../middleware/auth");
-
-
-// Import trainer controller functions
-const {
-  getAllTrainers,
-  getTrainerById,
-  createTrainer,
-  updateTrainer,
-  deleteTrainer,
-  getTrainerMembers,
-} = require("../controllers/trainerController");
 
 
 // Retrieve all trainers
@@ -33,7 +13,7 @@ router.get(
 );
 
 
-// Retrieve trainer by ID
+// Retrieve trainer 
 router.get(
   "/:id",
   verifyAdmin,
@@ -72,8 +52,5 @@ router.get(
   trainerController.getTrainerMembers
 );
 
-
-
-// Export router for use in application
 module.exports = router;
 

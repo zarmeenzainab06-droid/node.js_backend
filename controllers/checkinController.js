@@ -1,7 +1,7 @@
 const CheckinModel = require("../models/checkinModel");
 const MembershipModel = require("../models/membershipModel");
 
-// ── POST /admin/members/check-in ────────────────────────────────
+// POST /admin/members/check-in 
 const checkInMember = async (req, res) => {
   try {
     const { searchQuery } = req.body;
@@ -72,7 +72,7 @@ const checkInMember = async (req, res) => {
   }
 };
 
-// ── GET /admin/members/check-in/today ───────────────────────────
+// GET /admin/members/check-in/today
 const getTodayCheckIns = async (req, res) => {
   try {
     const rows = await CheckinModel.getTodayCheckIns();
@@ -84,7 +84,7 @@ const getTodayCheckIns = async (req, res) => {
   }
 };
 
-// ── GET /admin/members/:id/check-ins ────────────────────────────
+//  GET /admin/members/:id/check-ins 
 // A single member's full check-in history — shown on their profile.
 const getMemberCheckInHistory = async (req, res) => {
   try {

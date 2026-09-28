@@ -1,14 +1,10 @@
-// - createPayment/updatePayment no longer read package_id/package_amount
-//   from the request body — those are derived live via getAll/getById's
-//   JOIN with memberships+packages, never stored on the payments row.
-// - amount_received is the only amount field accepted from Flutter.
-// ════════════════════════════════════════════════════════════════════════
 
 const PaymentModel = require("../models/paymentModel");
+const MembershipModel = require("../models/membershipModel");
 const path = require("path");
-const fs = require("fs");
-const NotificationService = require("../services/notificationService"); // ← NEW: in-app notifications
-const db = require("../config/db"); // ← NEW: used to look up member name for notifications
+const fs = require("fs"); // for file deletion okkk
+const NotificationService = require("../services/notificationService"); // in-app notifications
+const db = require("../config/db"); //  used to look up member name for notifications
 
 // Retrieve all payment records  GET /admin/payments
 const getAllPayments = async (req, res) => {
@@ -60,13 +56,16 @@ const createPayment = async (req, res) => {
 
     // duplication check stays the same...
 
-    // ← NEW: resolve live package price once, to snapshot at creation
+    //  resolve live package price once, to snapshot at creation
     const [[pkg]] = await db.query(`
-      SELECT pkg.price AS package_amount
+      SELECT pkg.id AS package_id, pkg.price AS package_amount
       FROM memberships m JOIN packages pkg ON pkg.id = m.package_id
       WHERE m.user_id = ? ORDER BY m.created_at DESC LIMIT 1
     `, [user_id]);
     const package_amount = pkg ? pkg.package_amount : 0;
+    const package_id = pkg ? pkg.package_id : null;
+
+
    
    
     /////// block recording more payments once this month is already fully paid.
@@ -89,7 +88,7 @@ const createPayment = async (req, res) => {
 //////////
     const screenshot = req.file ? req.file.filename : null;
     const [result] = await PaymentModel.create({
-      user_id, membership_month, amount_received, package_amount, // ← NEW
+      user_id, package_id, membership_month, amount_received, package_amount, package_amount,  
       method: method || 'cash', status: status || 'pending',
       screenshot, payment_date, transaction_id: transaction_id || null,
     });
@@ -104,14 +103,9 @@ const createPayment = async (req, res) => {
         amount: amount_received,
       });
       // for the extend memershp if payemnt received ...
-await db.query(`
-        UPDATE memberships m
-        JOIN packages p ON p.id = m.package_id
-        SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
-            m.status = 'active'
-        WHERE m.user_id = ?
-          AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
-      `, [rows[0].user_id, rows[0].user_id]);    }
+       //  Auto-activate membership status last chngesss inshallahhhh
+      await MembershipModel.extendMembershipOnPayment(user_id);
+    }
 
     return res.status(201).json({
       success: true,
@@ -179,8 +173,8 @@ const updatePayment = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: amount_received,
       });
-      // Auto-activate membership status
-      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [old[0].user_id]);
+      // Auto-activate membership status last chngesss inshallahhhh
+      await MembershipModel.extendMembershipOnPayment(old[0].user_id);
     }
 
     return res.status(200).json({ success: true, message: "Payment updated" });
@@ -215,8 +209,9 @@ const updatePaymentStatus = async (req, res) => {
         memberName: memberRow ? memberRow.name : "A member",
         amount: rows[0].amount_received,
       });
-      // Auto-activate membership status
-      await db.query("UPDATE memberships SET status = 'active' WHERE user_id = ?", [rows[0].user_id]);
+    
+// Extend membership by one package duration, if paid last chngess 
+        await MembershipModel.extendMembershipOnPayment(rows[0].user_id);
     }
 
     return res.status(200).json({ success: true, message: 'Status updated' });

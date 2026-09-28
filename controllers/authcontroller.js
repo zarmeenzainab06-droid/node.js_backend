@@ -44,8 +44,8 @@ const login = async (req, res) => {
 const signup = async (req, res) => {
   const { 
     name, phone, gender, email, password } = req.body;
-  if (!name || !email || !password)
-    return res.status(400).json({ success: false, message: "Name, email and password are required" });
+  if (!name || !phone || !email || !password || !gender)
+    return res.status(400).json({ success: false, message: "Name, phone, email, password and gender are required" });
 
 if (!GMAIL_REGEX.test(email)) {
     return res.status(400).json({ success: false, message: "Please use a valid @gmail.com address" });

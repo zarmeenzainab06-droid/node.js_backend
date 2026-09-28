@@ -30,8 +30,8 @@ const verifyAdmin = (req, res, next) => {
     next();
   });
 };
-// ── Trainer only ──────────────────────────────────────────────
-// ✅ NEW — required by trainerRoutes.js
+// Trainer only 
+// required by trainerRoutes.js
 const verifyTrainer = (req, res, next) => {
   const token = req.headers["authorization"]?.split(" ")[1];
   if (!token)
@@ -43,12 +43,12 @@ const verifyTrainer = (req, res, next) => {
     if (decoded.role !== "trainer")
       return res.status(403).json({ success: false, message: "Access denied. Trainers only." });
  
-    req.user = decoded; // ✅ req.user.id used in all trainer routes
+    req.user = decoded; 
     next();
   });
 };
 
-// ── Member only ───────────────────────────────────────────────
+//  Member only 
 const verifyMember = (req, res, next) => {
   const token = req.headers["authorization"]?.split(" ")[1];
   if (!token)

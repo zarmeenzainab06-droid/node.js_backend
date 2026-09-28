@@ -7,19 +7,12 @@ const {
   resetPassword,
   verifyResetToken,
 } = require('../controllers/forgotPasswordController');
- 
-// POST /forgot-password  → send reset email
+
 router.post('/forgot-password', forgotPassword);
- 
-// GET /reset-password    → serve the HTML page (the link inside the email)
 router.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
+  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));//   givess serve the HTML page (the link inside the email)
 });
- 
-// POST /reset-password   → update password with token (called by the page's JS)
-router.post('/reset-password', resetPassword);
- 
-// GET  /verify-reset-token?token=&email=  → validate token
+router.post('/reset-password', resetPassword);//(called by the page's JS)
 router.get('/verify-reset-token', verifyResetToken);
  
 module.exports = router;

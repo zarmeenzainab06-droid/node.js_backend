@@ -1,6 +1,6 @@
 const SlotModel = require("../models/slotModel");
 
-// ── GET /admin/slots ──────────────────────────────────────────
+//  GET /admin/slots 
 const getAllSlots = async (req, res) => {
   try {
     const search = req.query.search ? `%${req.query.search}%` : "%";
@@ -11,7 +11,7 @@ const getAllSlots = async (req, res) => {
   }
 };
 
-// ── GET /admin/slots/:id ──────────────────────────────────────
+//  GET /admin/slots/:id 
 const getSlotById = async (req, res) => {
   try {
     const rows = await SlotModel.getSlotById(req.params.id);
@@ -23,7 +23,7 @@ const getSlotById = async (req, res) => {
   }
 };
 
-// ── GET /admin/slots/:id/members ──────────────────────────────
+//  GET /admin/slots/:id/members 
 const getSlotMembers = async (req, res) => {
   try {
     const rows = await SlotModel.getSlotById(req.params.id);
@@ -37,7 +37,7 @@ const getSlotMembers = async (req, res) => {
   }
 };
 
-// ── POST /admin/slots ─────────────────────────────────────────
+//  POST /admin/slots
 const createSlot = async (req, res) => {
   const { name, start_time, end_time, capacity, status, schedule_days } = req.body;
   if (!name || !start_time || !end_time)
@@ -54,7 +54,7 @@ const createSlot = async (req, res) => {
   }
 };
 
-// ── PUT /admin/slots/:id ──────────────────────────────────────
+//  PUT /admin/slots/:id 
 const updateSlot = async (req, res) => {
   const { name, start_time, end_time, capacity, status, schedule_days } = req.body;
   if (!name || !start_time || !end_time)
@@ -75,7 +75,7 @@ const updateSlot = async (req, res) => {
   }
 };
 
-// ── DELETE /admin/slots/:id ───────────────────────────────────
+// DELETE /admin/slots/:id 
 const deleteSlot = async (req, res) => {
   try {
     const affected = await SlotModel.deleteSlot(req.params.id);

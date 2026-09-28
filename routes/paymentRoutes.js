@@ -59,19 +59,9 @@ const upload = multer({
   },
 });
 
-
-// Payment statistics route
 router.get("/stats", verifyAdmin, PaymentController.getPaymentStats);
-
-
-// FOR UPDATE STATUS seperately
 router.patch('/:id/status', verifyAdmin, PaymentController.updatePaymentStatus);
- 
-
-// Retrieve all payments
 router.get("/", verifyAdmin, PaymentController.getAllPayments);
-
-// Retrieve payment by ID
 router.get("/:id", verifyAdmin, PaymentController.getPaymentById);
 
 // Create new payment with screenshot upload
@@ -92,7 +82,4 @@ router.put(
 router.delete("/:id", verifyAdmin, PaymentController.deletePayment);
 
 
-
-
-// Export router for use in application
 module.exports = router;

@@ -1,49 +1,26 @@
 const db = require("../config/db");
 
-// ── Check a single slot's current capacity (used by member create/update) ──
+//Check a single slot's current capacity (used by member create/update) ──
 const checkSlotCapacity = async (trainingSlot) => {
   const [[slotInfo]] = await db.query(
-    `SELECT s.name, s.capacity, COUNT(u.id) AS current_count
+     `SELECT s.name, s.capacity, COUNT(u.id) AS current_count
      FROM slots s
-     LEFT JOIN users u ON u.training_slot = (
-       CASE s.name
-         WHEN 'Morning Batch' THEN 'morning'
-         WHEN 'Mid-Day Batch' THEN 'midday'
-         WHEN 'Evening Batch' THEN 'evening'
-         WHEN 'Night Batch'   THEN 'night'
-         ELSE LOWER(REPLACE(s.name, ' ', ''))
-       END
-     ) AND u.role = 'user'
-     WHERE (
-       CASE s.name
-         WHEN 'Morning Batch' THEN 'morning'
-         WHEN 'Mid-Day Batch' THEN 'midday'
-         WHEN 'Evening Batch' THEN 'evening'
-         WHEN 'Night Batch'   THEN 'night'
-         ELSE LOWER(REPLACE(s.name, ' ', ''))
-       END
-     ) = ?
+     LEFT JOIN users u ON u.training_slot = s.name AND u.role = 'user'
+     WHERE s.name = ?
      GROUP BY s.id`,
     [trainingSlot]
   );
   return slotInfo;
 };
 
-// ── GET all slots with member count ───────────────────────────
+//GET all slots with member count 
 const getAllSlots = async (search) => {
   const [rows] = await db.query(
     `SELECT s.*,
        COUNT(u.id) AS assigned_members
      FROM slots s
-     LEFT JOIN users u ON u.training_slot = (
-       CASE s.name
-         WHEN 'Morning Batch' THEN 'morning'
-         WHEN 'Mid-Day Batch' THEN 'midday'
-         WHEN 'Evening Batch' THEN 'evening'
-         WHEN 'Night Batch'   THEN 'night'
-         ELSE LOWER(REPLACE(s.name, ' ', ''))
-       END
-     ) AND u.role = 'user'
+     LEFT JOIN users u ON u.training_slot = 
+      s.name AND u.role = 'user'
      WHERE s.name LIKE ?
      GROUP BY s.id
      ORDER BY s.created_at ASC`,
@@ -52,22 +29,13 @@ const getAllSlots = async (search) => {
   return rows;
 };
 
-// ── GET slot by ID with assigned members list ─────────────────
+//GET slot by ID with assigned members list 
 const getSlotById = async (id) => {
   const [rows] = await db.query(`SELECT * FROM slots WHERE id = ?`, [id]);
   return rows;
 };
 
 const getSlotMembers = async (slotName) => {
-  // Map slot name → enum value
-  const enumMap = {
-    "Morning Batch": "morning",
-    "Mid-Day Batch": "midday",
-    "Evening Batch": "evening",
-    "Night Batch":   "night",
-  };
-  const enumVal = enumMap[slotName] ?? slotName.toLowerCase().replace(" ", "");
-
   const [rows] = await db.query(
     `SELECT u.id, u.name, u.email, u.phone,
             m.status AS membership_status
@@ -78,12 +46,12 @@ const getSlotMembers = async (slotName) => {
      )
      WHERE u.training_slot = ? AND u.role = 'user'
      ORDER BY u.name ASC`,
-    [enumVal]
+    [slotName]
   );
   return rows;
 };
 
-// ── CREATE slot ───────────────────────────────────────────────
+//CREATE slot 
 const createSlot = async ({ name, start_time, end_time, capacity, status,schedule_days }) => {
   const [result] = await db.query(
     `INSERT INTO slots (name, start_time, end_time, capacity, status, schedule_days)
@@ -106,13 +74,13 @@ const updateSlot = async (id, { name, start_time, end_time, capacity, status, sc
   return result.affectedRows;
 };
 
-// ── DELETE slot ───────────────────────────────────────────────
+//DELETE slot 
 const deleteSlot = async (id) => {
   const [result] = await db.query(`DELETE FROM slots WHERE id = ?`, [id]);
   return result.affectedRows;
 };
 
-// ── CHECK name duplicate ──────────────────────────────────────
+//CHECK name duplicate 
 const findByName = async (name) => {
   const [rows] = await db.query(
     `SELECT id FROM slots WHERE name = ?`, [name]

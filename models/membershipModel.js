@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// ── Dashboard/report counts (existing) ──────────────────────────
+//  Dashboard/report counts (existing) 
 const countActive = async () => {
   const [[{ active }]] = await db.query(
     `SELECT COUNT(*) AS active FROM memberships
@@ -17,7 +17,7 @@ const countExpired = async () => {
   return expired;
 };
 
-// ── Count prior memberships for a user (assign vs renew) ────────
+// Count prior memberships for a user (assign vs renew) 
 const getPriorMembershipCount = async (userId) => {
   const [[{ priorCount }]] = await db.query(
     "SELECT COUNT(*) AS priorCount FROM memberships WHERE user_id = ?",
@@ -26,7 +26,7 @@ const getPriorMembershipCount = async (userId) => {
   return priorCount;
 };
 
-// ── Expire all memberships for a user before creating a new one ─
+//  Expire all memberships for a user before creating a new one 
 const expireMemberships = async (userId) => {
   await db.query(
     `UPDATE memberships SET status = 'expired' WHERE user_id = ?`,
@@ -34,7 +34,7 @@ const expireMemberships = async (userId) => {
   );
 };
 
-// ── Create a fresh membership row ────────────────────────────────
+//  Create a fresh membership row 
 const createMembership = async (
   userId,
   package_id,
@@ -51,7 +51,7 @@ const createMembership = async (
   );
 };
 
-// ── Snapshot of current membership + latest payment, for change checks ──
+//  Snapshot of current membership + latest payment, for change checks 
 const getLatestMembershipSnapshot = async (userId) => {
   const [rows] = await db.query(
     `SELECT package_id, start_date, end_date FROM memberships
@@ -70,7 +70,7 @@ const getLatestPaymentAmount = async (userId) => {
   return rows.length ? Number(rows[0].amount_received) : null;
 };
 
-// ── Update (or create) the user's currently-active membership ───
+// Update (or create) the user's currently-active membership 
 const updateActiveMembership = async (userId, data) => {
   const [rows] = await db.query(
     `
@@ -117,7 +117,7 @@ const updateActiveMembership = async (userId, data) => {
   );
 };
 
-// ── Lean price lookup (used to snapshot package_amount) ──────────
+// Lean price lookup (used to snapshot package_amount) 
 const getPackagePrice = async (packageId) => {
   const [[pkg]] = await db.query(
     "SELECT price FROM packages WHERE id = ?",
@@ -126,19 +126,20 @@ const getPackagePrice = async (packageId) => {
   return pkg ? pkg.price : 0;
 };
 
-// ── Create Payment (as part of assigning a membership) ───────────
+// Create Payment (as part of assigning a membership) 
+
 const createPayment = async (
   userId, amountReceived, payment_method, screenshotPath,
-  membership_month, transaction_id = null, packageAmount = 0
+  membership_month, transaction_id = null, packageAmount = 0, packageId = null
 ) => {
   return await db.query(`
     INSERT INTO payments
-    (user_id, amount_received, package_amount, method, status, screenshot, membership_month, transaction_id)
-    VALUES (?, ?, ?, ?, 'paid', ?, ?, ?)
-  `, [userId, amountReceived, packageAmount, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]);
+    (user_id, package_id, amount_received, package_amount, method, status, screenshot, membership_month, transaction_id, payment_date)
+    VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?, CURDATE())
+  `, [userId, packageId, amountReceived, packageAmount, payment_method || "cash", screenshotPath, membership_month || null, transaction_id]);
 };
 
-// ── Update the member's latest payment (as part of editing a membership) ─
+
 const updateLatestPayment = async (userId, data) => {
   const [rows] = await db.query(
     `SELECT id FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
@@ -147,47 +148,65 @@ const updateLatestPayment = async (userId, data) => {
 
   if (rows.length === 0) {
     await db.query(
-      `INSERT INTO payments (user_id, amount_received, package_amount, method, status, screenshot, transaction_id)
-     VALUES (?, ?, ?, ?, 'paid', ?, ?)`,
-      [userId, data.amount, data.packageAmount || 0, data.paymentMethod, data.screenshot, data.transactionId || null]
+     `INSERT INTO payments (user_id, package_id, amount_received, package_amount, method, status, screenshot, membership_month, transaction_id, payment_date)
+       VALUES (?, ?, ?, ?, ?, 'paid', ?, ?, ?, CURDATE())`,
+      [
+        userId,
+        data.packageId || null,
+        data.amount,
+        data.packageAmount || 0,
+        data.paymentMethod || 'cash',
+        data.screenshot,
+        data.membershipMonth || null,
+        data.transactionId || null,
+      ]
     );
     return;
   }
 
-  // ← FIXED: writes to amount_received not amount
+  //  FIXED: writes to amount_received not amount
   await db.query(
-    `UPDATE payments SET amount_received = ?, method = ?, screenshot = ?,transaction_id = ? WHERE id = ?`,
+     `UPDATE payments SET amount_received = ?, method = ?, screenshot = ?, transaction_id = ?, payment_date = CURDATE() WHERE id = ?`,
     [data.amount, data.paymentMethod, data.screenshot, data.transactionId || null, rows[0].id]
   );
 };
+// Shared by createPayment, updatePayment, and updatePaymentStatus so the
+// "paying activates/extends membership" rule lives in exactly one place.
+const extendMembershipOnPayment = async (userId) => {
+  await db.query(
+    `
+    UPDATE memberships m
+    JOIN packages p ON p.id = m.package_id
+    SET m.end_date = DATE_ADD(GREATEST(m.end_date, CURDATE()), INTERVAL p.duration DAY),
+        m.status = 'active'
+    WHERE m.user_id = ?
+      AND m.id = (SELECT id FROM (SELECT id FROM memberships WHERE user_id = ? ORDER BY created_at DESC LIMIT 1) x)
+    `,
+    [userId, userId]
+  );
+};
 
-// ── Freeze or unfreeze membership status ──────────────────────────
+// Freeze or unfreeze membership status 
+// Freeze: remember the day it started. Unfreeze: push end_date forward by the frozen days.
 const updateMembershipStatus = async (userId, status) => {
-  await db.query(
-    `UPDATE memberships 
-     SET status = ? 
-     WHERE user_id = ? AND status != 'expired'`,
-    [status, userId]
-  );
+  if (status === 'frozen') {
+    await db.query(
+      `UPDATE memberships SET status = 'frozen', frozen_at = CURDATE()
+       WHERE user_id = ? AND status = 'active'`,
+      [userId]
+    );
+  } else {
+    await db.query(
+      `UPDATE memberships
+       SET status = 'active',
+           end_date = DATE_ADD(end_date, INTERVAL IFNULL(DATEDIFF(CURDATE(), frozen_at), 0) DAY),
+           frozen_at = NULL
+       WHERE user_id = ? AND status = 'frozen'`,
+      [userId]
+    );
+  }
 };
-
-const setFreezeUntil = async (userId, days) => {
-  await db.query(
-    `UPDATE memberships SET freeze_until = DATE_ADD(NOW(), INTERVAL ? DAY)
-     WHERE user_id = ? AND status = 'frozen'`,
-    [days, userId]
-  );
-};
-
-const clearFreezeUntil = async (userId) => {
-  await db.query(
-    `UPDATE memberships SET freeze_until = NULL
-     WHERE user_id = ?`,
-    [userId]
-  );
-};
-
-// ── Latest membership status + end date (used by member check-in gate) ─
+// Latest membership status + end date (used by member check-in gate) 
 const getLatestMembershipStatus = async (userId) => {
   const [rows] = await db.query(
     `SELECT status, end_date FROM memberships 
@@ -198,7 +217,7 @@ const getLatestMembershipStatus = async (userId) => {
   return rows;
 };
 
-// ── Current month's payment status (used by member check-in gate) ──
+//  Current month's payment status (used by member check-in gate) 
 const getCurrentMonthPaymentStatus = async (userId, membershipMonth) => {
   const [rows] = await db.query(
     `SELECT status FROM payments 
@@ -222,8 +241,9 @@ module.exports = {
   createPayment,
   updateLatestPayment,
   updateMembershipStatus,
-  setFreezeUntil,
-  clearFreezeUntil,
+  extendMembershipOnPayment,
+  // setFreezeUntil,
+  // clearFreezeUntil,
   getLatestMembershipStatus,
   getCurrentMonthPaymentStatus,
 };

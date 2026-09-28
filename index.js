@@ -1,15 +1,15 @@
-// Import required packages
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const cron = require('node-cron');
-const db = require("./config/db"); // ← add this
+const db = require("./config/db"); 
 
 // Import route files
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const forgotPasswordRoutes = require("./routes/forgotPasswordRoutes"); // ✅ NEW
+const forgotPasswordRoutes = require("./routes/forgotPasswordRoutes"); 
 const memberRoutes = require("./routes/memberRoutes");
 const packageRoutes = require("./routes/packageRoutes");
 const trainerRoutes = require("./routes/trainerRoutes");
@@ -18,8 +18,7 @@ const adminProfileRoutes = require("./routes/adminProfileRoutes");
 const trainerPanelRoutes = require("./routes/trainerPanelRoutes");
 const slotRoutes = require("./routes/slotRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-// const memberPortalRoutes = require("./routes/memberPortalRoutes");
-const notificationRoutes = require("./routes/notificationRoutes"); // ← NEW: in-app notifications
+const notificationRoutes = require("./routes/notificationRoutes"); 
 const NotificationService = require("./services/notificationService"); // ← NEW
 
 
@@ -37,7 +36,7 @@ app.use(express.json());
 
 
 
-// ── Auto expire memberships ───// for auto expire status in member module 
+//  Auto expire memberships // for auto expire status in member module 
 
 const autoExpireMemberships = async () => {
   try {
@@ -56,7 +55,6 @@ const autoExpireMemberships = async () => {
 cron.schedule('0 0 * * *', autoExpireMemberships);
 
 
-// ── Notify members whose membership is expiring soon 
 // Fires an in-app notification (admin + member) exactly
 const NOTIFY_DAYS_BEFORE_EXPIRY = 3;
 
@@ -96,7 +94,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Routes 
 app.use("/", authRoutes);
 app.use("/admin", adminRoutes);
-app.use("/", forgotPasswordRoutes);        // ✅ NE: /forgot-password, /reset-password, /verify-reset-tokenapp.use("/admin/members", memberRoutes);
+app.use("/", forgotPasswordRoutes);        
 app.use("/admin/packages", packageRoutes);
 app.use("/admin/members", memberRoutes);
 
@@ -106,8 +104,7 @@ app.use("/admin/payments", paymentRoutes);
 app.use("/trainer", trainerPanelRoutes);
 app.use("/admin/slots", slotRoutes);
 app.use("/admin/reports", reportRoutes);
-// app.use("/api/member", memberPortalRoutes);
-app.use("/notifications", notificationRoutes); // ← NEW: in-app notifications
+app.use("/notifications", notificationRoutes); 
 
 
 
@@ -116,7 +113,6 @@ app.use("/notifications", notificationRoutes); // ← NEW: in-app notifications
 app.use("/api/members", require("./routes/member/members"));
 app.use("/api/payments", require("./routes/member/payment_routes"));
 app.use("/api/packages", require("./routes/member/memberpackageroutes"));
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/diet", require("./routes/member/diet_routes"));
 // Start server
 app.listen(port, () => {

@@ -1,9 +1,7 @@
 // Import database connection pool
 const db = require("../config/db");
 
-// ── Create a notification row ───────────────────────────────────
-// role: 'admin' | 'trainer' | 'user'
-// userId: specific recipient id (null for admin broadcast notifications)
+// for all actores create noti
 const create = async ({ role, userId, type, title, message, referenceId }) => {
   const [result] = await db.query(
     `INSERT INTO notifications (role, user_id, type, title, message, reference_id)
@@ -13,16 +11,14 @@ const create = async ({ role, userId, type, title, message, referenceId }) => {
   return result.insertId;
 };
 
-// ── Get notifications for a recipient ───────────────────────────
-// Admins see every admin-broadcast row; trainers/members only see rows
-// addressed to their own user_id.
+// get notifi
 const getForRecipient = async (role, userId, { unreadOnly = false } = {}) => {
   let query = `SELECT id, role, user_id, type, title, message, reference_id, is_read, created_at
                FROM notifications WHERE role = ?`;
   const params = [role];
 
   if (role === "admin") {
-    // admin notifications are broadcast to all admins (user_id is NULL)
+    // admin notifications are showww to all admins (user_id is NULL)
   } else {
     query += " AND user_id = ?";
     params.push(userId);
@@ -38,7 +34,7 @@ const getForRecipient = async (role, userId, { unreadOnly = false } = {}) => {
   return rows;
 };
 
-// ── Unread count for a recipient ────────────────────────────────
+//  Unread count for a recipient 
 const getUnreadCount = async (role, userId) => {
   let query = `SELECT COUNT(*) AS unread FROM notifications WHERE role = ? AND is_read = 0`;
   const params = [role];
@@ -52,7 +48,7 @@ const getUnreadCount = async (role, userId) => {
   return unread;
 };
 
-// ── Mark a single notification as read (scoped to the recipient) ─
+//  Mark a single notification as read (scoped to the recipient) 
 const markAsRead = async (id, role, userId) => {
   let query = `UPDATE notifications SET is_read = 1 WHERE id = ? AND role = ?`;
   const params = [id, role];
@@ -66,7 +62,7 @@ const markAsRead = async (id, role, userId) => {
   return result.affectedRows;
 };
 
-// ── Mark all notifications for a recipient as read ──────────────
+//  Mark all notifications for a recipient as read
 const markAllAsRead = async (role, userId) => {
   let query = `UPDATE notifications SET is_read = 1 WHERE role = ? AND is_read = 0`;
   const params = [role];
@@ -80,8 +76,8 @@ const markAllAsRead = async (role, userId) => {
   return result.affectedRows;
 };
 
-// ── Check if a notification of a given type/reference already exists ─
-// Used to avoid duplicate "membership expiring" notifications firing
+
+// Used to avod duplcate membership expiring notifications firinggggg
 // every day the cron runs.
 const existsByTypeAndReference = async (type, referenceId) => {
   const [rows] = await db.query(

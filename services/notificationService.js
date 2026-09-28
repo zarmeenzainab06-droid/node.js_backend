@@ -1,9 +1,4 @@
-// ════════════════════════════════════════════════════════════════════════
-// notificationService.js
-// Internal helper used by other controllers to create notifications.
-// Not exposed directly as routes — see controllers/notificationController.js
-// for the API that the Flutter app calls to READ notifications.
-// ════════════════════════════════════════════════════════════════════════
+
 const NotificationModel = require("../models/notificationModel");
 
 // Swallow errors so a notification failure never breaks the real
@@ -16,7 +11,7 @@ const safeCreate = async (data) => {
   }
 };
 
-// ── Member added ─────────────────────────────────────────────────
+//Member added 
 const notifyMemberAdded = async ({ memberId, memberName }) => {
   await safeCreate({
     role: "admin",
@@ -28,7 +23,7 @@ const notifyMemberAdded = async ({ memberId, memberName }) => {
   });
 };
 
-// ── Member checked in ───────────────────────────────────────────
+//Member checked in 
 const notifyCheckIn = async ({ memberId, memberName }) => {
   await safeCreate({
     role: "member",
@@ -40,7 +35,7 @@ const notifyCheckIn = async ({ memberId, memberName }) => {
   });
 };
 
-// ── Member assigned to a trainer ────────────────────────────────
+//Member assigned to a trainer ─
 const notifyMemberAssignedToTrainer = async ({ trainerId, memberId, memberName }) => {
   if (!trainerId) return;
   await safeCreate({
@@ -53,7 +48,7 @@ const notifyMemberAssignedToTrainer = async ({ trainerId, memberId, memberName }
   });
 };
 
-// ── Membership assigned / renewed ───────────────────────────────
+//Membership assigned / renewed 
 const notifyMembershipRenewed = async ({ memberId, memberName, endDate, isNew }) => {
   const title = isNew ? "Membership assigned" : "Membership renewed";
   const adminMsg = isNew
@@ -82,7 +77,7 @@ const notifyMembershipRenewed = async ({ memberId, memberName, endDate, isNew })
   });
 };
 
-// ── Payment received ────────────────────────────────────────────
+//Payment received 
 const notifyPaymentReceived = async ({ paymentId, memberId, memberName, amount }) => {
   await safeCreate({
     role: "admin",
@@ -105,7 +100,7 @@ const notifyPaymentReceived = async ({ paymentId, memberId, memberName, amount }
   }
 };
 
-// ── Online payment approved + membership renewed (one combined notice) ──
+//Online payment approved + membership renewed (one combined notice) 
 const notifyPaymentApprovedRenewed = async ({ paymentId, memberId, memberName, amount, endDate }) => {
   await safeCreate({
     role: "admin",
@@ -126,7 +121,7 @@ const notifyPaymentApprovedRenewed = async ({ paymentId, memberId, memberName, a
   });
 };
 
-// ── Membership about to expire ──────────────────────────────────
+//Membership about to expire 
 const notifyMembershipExpiring = async ({ membershipId, memberId, memberName, endDate, daysLeft }) => {
   // Avoid sending the same expiry warning twice for the same membership
   const alreadySent = await NotificationModel.existsByTypeAndReference(
@@ -154,7 +149,7 @@ const notifyMembershipExpiring = async ({ membershipId, memberId, memberName, en
   });
 };
 
-// ── Membership frozen / unfrozen ───────────────────────────────
+//Membership frozen / unfrozen 
 const notifyMembershipFrozen = async ({ memberId, memberName, action }) => {
   const isFreeze = action === "freeze";
   const title = isFreeze ? "Membership Frozen" : "Membership Activated";

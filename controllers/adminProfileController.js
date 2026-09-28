@@ -31,7 +31,7 @@ const getProfile = async (req, res) => {
 
 // Update admin profile
 const updateProfile = async (req, res) => {
-  const { name, phone, gym_location } = req.body;
+  const { name, phone, gym_location, jazzcash_number } = req.body;
 
   if (!name) {
     return res.status(400).json({
@@ -47,12 +47,20 @@ const updateProfile = async (req, res) => {
       message: "Please enter a valid Pakistani phone number.",
     });
   }
+  if (jazzcash_number && !PAK_PHONE_REGEX.test(jazzcash_number)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter a valid JazzCash number.",
+    });
+  }
 
   try {
     await AdminProfileModel.updateProfile(req.user.id, {
       name,
       phone,
       gym_location,
+      jazzcash_number,
+
     });
 
     return res.status(200).json({

@@ -3,7 +3,7 @@ const db = require("../config/db");
 // Retrieve admin profile
 const getProfile = async (adminId) => {
   const [rows] = await db.query(
-    `SELECT id, name, email, phone, gym_location, role, created_at
+    `SELECT id, name, email, phone, gym_location,jazzcash_number, role, created_at
      FROM users
      WHERE id = ? AND role = 'admin'`,
     [adminId]
@@ -13,13 +13,13 @@ const getProfile = async (adminId) => {
 };
 
 // Update admin profile
-const updateProfile = async (adminId, { name, phone, gym_location }) => {
+const updateProfile = async (adminId, { name, phone, gym_location, jazzcash_number }) => {
   const [result] = await db.query(
     `UPDATE users
-     SET name = ?, phone = ?, gym_location = ?,
+     SET name = ?, phone = ?, gym_location = ?, jazzcash_number = ?,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ? AND role = 'admin'`,
-    [name, phone || null, gym_location || null, adminId]
+    [name, phone || null, gym_location ||  null, jazzcash_number || null, adminId]
   );
 
   return result.affectedRows;

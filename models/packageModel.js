@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// ── GET all packages with their slots as an array ─────────────
+//  GET all packages with their slots as an array 
 const getAllPackages = async (activeOnly = false) => {
   const condition = activeOnly ? "WHERE p.is_active = 1" : "";
 
@@ -39,7 +39,7 @@ const getAllPackages = async (activeOnly = false) => {
   return packages.map((p) => ({ ...p, slots: slotMap[p.id] || [] }));
 };
 
-// ── GET package by ID with slots ──────────────────────────────
+//  GET package by ID with slots 
 const getPackageById = async (id) => {
   const [packages] = await db.query(
     `SELECT id, name, duration, price, description, is_active, created_at
@@ -68,7 +68,7 @@ const getPackageById = async (id) => {
   return packages;
 };
 
-// ── GET slots for a specific package (member form dropdown) ───
+//  GET slots for a specific package (member form dropdown) 
 const getSlotsByPackageId = async (packageId) => {
   const [rows] = await db.query(
     `SELECT s.id, s.name, s.start_time, s.end_time, s.status
@@ -81,7 +81,7 @@ const getSlotsByPackageId = async (packageId) => {
   return rows;
 };
 
-// ── CREATE package + link slots ───────────────────────────────
+//  CREATE package + link slots 
 const createPackage = async ({ name, duration, price, description, is_active, slotIds }) => {
   const conn = await db.getConnection();
   try {
@@ -109,7 +109,7 @@ const createPackage = async ({ name, duration, price, description, is_active, sl
   }
 };
 
-// ── UPDATE package + replace slots ───────────────────────────
+//  UPDATE package + replace slots 
 const updatePackage = async (id, { name, duration, price, description, is_active, slotIds }) => {
   const conn = await db.getConnection();
   try {
@@ -139,7 +139,7 @@ const updatePackage = async (id, { name, duration, price, description, is_active
   }
 };
 
-// ── DELETE package ────────────────────────────────────────────
+//  DELETE package 
 const deletePackage = async (id) => {
   const [result] = await db.query(`DELETE FROM packages WHERE id = ?`, [id]);
   return result.affectedRows;

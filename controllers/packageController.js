@@ -1,6 +1,6 @@
 const PackageModel = require("../models/packageModel");
 
-// ── GET /admin/packages ───────────────────────────────────────
+//  GET /admin/packages 
 const getAllPackages = async (req, res) => {
   try {
     const activeOnly = req.query.active === "1";
@@ -12,7 +12,7 @@ const getAllPackages = async (req, res) => {
   }
 };
 
-// ── GET /admin/packages/:id ───────────────────────────────────
+//  GET /admin/packages/:id 
 const getPackageById = async (req, res) => {
   try {
     const rows = await PackageModel.getPackageById(req.params.id);
@@ -24,7 +24,7 @@ const getPackageById = async (req, res) => {
   }
 };
 
-// ── GET /admin/packages/:id/slots ─────────────────────────────
+//  GET /admin/packages/:id/slots 
 // Returns only the slots linked to a package — used by member form
 const getPackageSlots = async (req, res) => {
   try {
@@ -35,7 +35,7 @@ const getPackageSlots = async (req, res) => {
   }
 };
 
-// ── POST /admin/packages ──────────────────────────────────────
+//  POST /admin/packages 
 const createPackage = async (req, res) => {
   const { name, duration, price, description, is_active, slot_ids } = req.body;
 
@@ -58,7 +58,7 @@ const createPackage = async (req, res) => {
   }
 };
 
-// ── PUT /admin/packages/:id ───────────────────────────────────
+//  PUT /admin/packages/:id 
 const updatePackage = async (req, res) => {
   const { name, duration, price, description, is_active, slot_ids } = req.body;
 
@@ -85,7 +85,7 @@ const updatePackage = async (req, res) => {
   }
 };
 
-// ── DELETE /admin/packages/:id ────────────────────────────────
+//  DELETE /admin/packages/:id 
 const deletePackage = async (req, res) => {
   try {
     const affected = await PackageModel.deletePackage(req.params.id);

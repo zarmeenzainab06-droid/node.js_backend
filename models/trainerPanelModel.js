@@ -1,12 +1,7 @@
-// models/trainerModel.js
-// PURPOSE: This file ONLY talks to the database.
-// All SQL queries live here. No business logic here.
-// Think of this as the "chef" — only cooks, nothing else.
- 
 const db = require('../config/db');
  const TrainerModel = {
  
-  // ── 1. Get trainer's own profile ─────────────────────────────
+  // 1. Get trainer's own profile
   // Simple: find user by id where role is trainer
   getProfile: async (trainerId) => {
     const [rows] = await db.query(
@@ -18,7 +13,7 @@ const db = require('../config/db');
     return rows[0]; // return single trainer object
   },
  
-  // ── 2. Update trainer profile ─────────────────────────────────
+  // 2. Update trainer profile
   // Simple: update only name, phone, specialization
   updateProfile: async (trainerId, name, phone, specialization) => {
     await db.query(
@@ -29,7 +24,7 @@ const db = require('../config/db');
     );
   },
  
-  // ── 3. Change password ────────────────────────────────────────
+  // 3. Change password 
   // Simple: get current password to verify, then update
   getPassword: async (trainerId) => {
     const [rows] = await db.query(
@@ -46,7 +41,7 @@ const db = require('../config/db');
     );
   },
  
-  // ── 4. Count total members assigned to trainer ────────────────
+  // 4. Count total members assigned to trainer 
   // Simple: count users where trainer_id matches
   countMembers: async (trainerId) => {
     const [[row]] = await db.query(
@@ -58,7 +53,7 @@ const db = require('../config/db');
     return Number(row.total);
   },
  
-  // ── 5. Count active memberships of trainer's members ──────────
+  // 5. Count active memberships of trainer's members 
   // Simple: count memberships that are active
   countActiveMemberships: async (trainerId) => {
     const [[row]] = await db.query(
@@ -71,7 +66,7 @@ const db = require('../config/db');
     return Number(row.total);
   },
  
-  // ── 6. Count members with training slot ───────────────────────
+  // 6. Count members with training slot ─
   // Simple: count members who have a slot assigned
   countTodaySlots: async (trainerId) => {
     const [[row]] = await db.query(
@@ -85,7 +80,7 @@ const db = require('../config/db');
     return Number(row.total);
   },
  
-  // ── 7. Get all members of this trainer ────────────────────────
+  // 7. Get all members of this trainer 
   // Gets member info + their latest membership + diet plan title
   getMembers: async (trainerId, search = '') => {
     const [rows] = await db.query(
@@ -134,7 +129,7 @@ const db = require('../config/db');
     return rows;
   },
  
-  // ── 8. Get single member (for profile view) ───────────────────
+  // 8. Get single member (for profile view) 
   // Simple: get one member by id, verify they belong to trainer
   getMemberById: async (memberId, trainerId) => {
     const [rows] = await db.query(
@@ -167,8 +162,6 @@ const db = require('../config/db');
     return rows[0];
   },
  
-  // ── 9. Get today's schedule ───────────────────────────────────
-  // Gets members + their slot times from slots table
   // Flutter uses start_time/end_time to show upcoming vs completed
   getTodaySchedule: async (trainerId) => {
     const [rows] = await db.query(
@@ -191,7 +184,7 @@ const db = require('../config/db');
     return rows;
   },
  
-  // ── 10. Get recent membership activity ────────────────────────
+  // 10. Get recent membership activity 
   // Shows what recently happened with trainer's members
   getActivity: async (trainerId) => {
     const [rows] = await db.query(
@@ -209,11 +202,8 @@ const db = require('../config/db');
     return rows;
   },
  
-  // ══════════════════════════════════════════════════════════════
-  // DIET PLAN QUERIES
-  // ══════════════════════════════════════════════════════════════
  
-  // ── 11. Get all diet plans by trainer ─────────────────────────
+  //  Get all diet plans by trainer 
   getDietPlans: async (trainerId) => {
     const [rows] = await db.query(
       `SELECT
@@ -242,7 +232,7 @@ const db = require('../config/db');
     return rows;
   },
  
-  // ── 12. Get single diet plan ──────────────────────────────────
+  // 12. Get single diet plan 
   getDietPlanById: async (planId, trainerId) => {
     const [rows] = await db.query(
       `SELECT dp.*, u.name AS member_name
@@ -254,7 +244,7 @@ const db = require('../config/db');
     return rows[0];
   },
  
-  // ── 13. Create diet plan ──────────────────────────────────────
+  // 13. Create diet plan 
   createDietPlan: async (trainerId, memberId, title, date, breakfast, lunch, dinner, snacks) => {
     const [result] = await db.query(
       `INSERT INTO diet_plans
@@ -265,7 +255,7 @@ const db = require('../config/db');
     return result.insertId; // returns new plan's id
   },
  
-  // ── 14. Update diet plan ──────────────────────────────────────
+  // 14. Update diet plan 
   updateDietPlan: async (planId, trainerId, memberId, title, date, breakfast, lunch, dinner, snacks) => {
     await db.query(
       `UPDATE diet_plans
@@ -276,7 +266,7 @@ const db = require('../config/db');
     );
   },
  
-  // ── 15. Delete diet plan ──────────────────────────────────────
+  // 15. Delete diet plan 
   deleteDietPlan: async (planId, trainerId) => {
     await db.query(
       `DELETE FROM diet_plans WHERE id=? AND trainer_id=?`,
@@ -284,7 +274,7 @@ const db = require('../config/db');
     );
   },
  
-  // ── 16. Diet plan stats ───────────────────────────────────────
+  // 16. Diet plan stats ─
   getDietPlanStats: async (trainerId) => {
     // Total plans
     const [[{ total }]] = await db.query(
@@ -318,7 +308,7 @@ const db = require('../config/db');
     };
   },
  
-  // ── 17. Verify member belongs to trainer ──────────────────────
+  // 17. Verify member belongs to trainer 
   // Security check before creating/updating diet plan
     isMemberOfTrainer: async (memberId, trainerId) => {
     const [rows] = await db.query(
@@ -329,7 +319,7 @@ const db = require('../config/db');
     return rows.length > 0;
   },
 
-  // ── 18. Get remarks for a diet plan (trainer view) ─────────────
+  // 18. Get remarks for a diet plan (trainer view) 
   getDietPlanRemarks: async (planId, trainerId) => {
     const [planRows] = await db.query(
       `SELECT id FROM diet_plans WHERE id = ? AND trainer_id = ?`,

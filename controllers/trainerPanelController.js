@@ -1,14 +1,8 @@
-// controllers/trainerController.js
-// PURPOSE: Business logic lives here.
-// Gets data from Model, processes it, sends response.
-// Think of this as the "waiter" — takes request, asks chef
-// (model) for data, then serves back the response.
- 
 const TrainerModel = require('../models/trainerPanelModel');
  
 const TrainerController = {
  
-  // ── 1. Get Dashboard Stats ────────────────────────────────────
+  // 1. Get Dashboard Stats 
   // Called when trainer opens dashboard
   getStats: async (req, res) => {
     try {
@@ -31,7 +25,7 @@ const TrainerController = {
     }
   },
  
-  // ── 2. Get All Members ────────────────────────────────────────
+  //  2. Get All Members 
   // Called when trainer opens Members screen
   getMembers: async (req, res) => {
     try {
@@ -46,7 +40,7 @@ const TrainerController = {
     }
   },
  
-  // ── 3. Get Single Member Profile ──────────────────────────────
+  //  3. Get Single Member Profile 
   // Called when trainer taps "View Details" on a member
   getMemberById: async (req, res) => {
     try {
@@ -70,7 +64,7 @@ const TrainerController = {
     }
   },
  
-  // ── 4. Get Today's Schedule ───────────────────────────────────
+  //  4. Get Today's Schedule ─
   // Called when trainer opens Schedule or Dashboard
   getTodaySchedule: async (req, res) => {
     try {
@@ -96,7 +90,7 @@ const TrainerController = {
     }
   },
  
-  // ── 5. Get Recent Activity ────────────────────────────────────
+  //  5. Get Recent Activity 
   // Called on dashboard to show recent membership activity
   getActivity: async (req, res) => {
     try {
@@ -119,7 +113,7 @@ const TrainerController = {
     }
   },
  
-  // ── 6. Get Trainer Profile ────────────────────────────────────
+  //  6. Get Trainer Profile 
   getProfile: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -159,7 +153,7 @@ const TrainerController = {
     }
   },
  
-  // ── 7. Update Trainer Profile ─────────────────────────────────
+  //  7. Update Trainer Profile 
   updateProfile: async (req, res) => {
     try {
       const trainerId                     = req.user.id;
@@ -177,7 +171,7 @@ const TrainerController = {
     }
   },
  
-  // ── 8. Change Password ────────────────────────────────────────
+  //  8. Change Password 
   changePassword: async (req, res) => {
     try {
       const trainerId                     = req.user.id;
@@ -207,11 +201,10 @@ const TrainerController = {
     }
   },
  
-  // ══════════════════════════════════════════════════════════════
+  
   // DIET PLAN CONTROLLERS
-  // ══════════════════════════════════════════════════════════════
  
-  // ── 9. Get All Diet Plans ─────────────────────────────────────
+  //  9. Get All Diet Plans ─
   getDietPlans: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -226,7 +219,7 @@ const TrainerController = {
     }
   },
  
-  // ── 10. Get Single Diet Plan ──────────────────────────────────
+  //  10. Get Single Diet Plan 
   getDietPlanById: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -243,7 +236,7 @@ const TrainerController = {
     }
   },
  
-  // ── 11. Create Diet Plan ──────────────────────────────────────
+  //  11. Create Diet Plan 
   createDietPlan: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -279,7 +272,7 @@ const TrainerController = {
     }
   },
  
-  // ── 12. Update Diet Plan ──────────────────────────────────────
+  //  12. Update Diet Plan 
   updateDietPlan: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -309,7 +302,7 @@ const TrainerController = {
     }
   },
  
-  // ── 13. Delete Diet Plan ──────────────────────────────────────
+  //  13. Delete Diet Plan 
   deleteDietPlan: async (req, res) => {
     try {
       const trainerId = req.user.id;
@@ -328,7 +321,7 @@ const TrainerController = {
       res.status(500).json({ success: false, message: 'Server error' });
     }
   },
-   // ── 14. Get Diet Plan Remarks ───────────────────────────────────
+   //  14. Get Diet Plan Remarks ─
   // Called when trainer expands a plan to see member feedback
   getDietPlanRemarks: async (req, res) => {
     try {
@@ -347,7 +340,7 @@ const TrainerController = {
   },
 };
  
-// ── Helper: Convert date to "X hours ago" format ──────────────
+//  Helper: Convert date to "X hours ago" format 
 // Used in getActivity controller
 function _timeAgo(date) {
   const diffMs   = Date.now() - new Date(date).getTime();

@@ -73,7 +73,7 @@ const forgotPassword = async (req, res) => {
     );
  
     // Build reset link — points to your Flutter web app (GetX hash routing)
-const resetLink = `http://gym.sandbox.pk/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
+const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${encodeURIComponent(email)}`; 
     // Send email
     await transporter.sendMail({
       from: `"GymFitex" <${SMTP_EMAIL}>`,
